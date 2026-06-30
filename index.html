@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meal Hub · Lite n' Easy CHSP</title>
+<style>
+:root{
+  --ink:#1c241f;--paper:#f4f1e9;--card:#fbfaf5;--line:#d9d3c4;
+  --green:#1f5c3d;--green-d:#143d28;--gold:#b07d2b;--muted:#6e6a5e;
+  --veg:#2f7d4f;--warn:#9a3b2f;--chip:#ece5d6;--want:#2f7d4f;--reject:#9a3b2f;
+  --shadow:0 1px 2px rgba(28,36,31,.06),0 6px 18px rgba(28,36,31,.05);
+  --navh:60px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);
+  font-family:"Segoe UI",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  line-height:1.45;-webkit-font-smoothing:antialiased}
+.mono{font-family:"SFMono-Regular",Menlo,Consolas,"Courier New",monospace}
+.zh{font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+.wrap{max-width:740px;margin:0 auto}
+button{font-family:inherit}
+
+/* top bar */
+.topbar{background:var(--green);color:#f4efe2;position:sticky;top:0;z-index:40;
+  padding:10px 16px;display:flex;align-items:center;gap:10px}
+.topbar .ttl{font-size:16px;font-weight:700}
+.topbar .ttl .zh{font-size:12px;color:#cfe0d4;font-weight:600;margin-left:5px}
+.topbar .sp{flex:1}
+.savedot{font-size:11.5px;color:#9fd6b4;display:flex;align-items:center;gap:5px}
+.savedot.unsaved{color:#f1c40f}
+.savedot .d{font-size:9px}
+.databtn{background:rgba(255,255,255,.12);border:1px solid #3c6b51;color:#eef3ee;
+  padding:6px 11px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer}
+
+main{padding:14px 16px calc(var(--navh) + 26px)}
+.panel{display:none}
+.panel.on{display:block}
+.intro{font-size:12px;color:var(--muted);margin:0 0 13px}
+.h-row{display:flex;align-items:baseline;gap:8px;margin:2px 0 12px}
+.h-row h2{margin:0;font-size:17px;font-weight:700}
+.h-row h2 .zh{font-size:13px;color:var(--muted);font-weight:600;margin-left:5px}
+
+/* bottom nav */
+.bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:50;height:var(--navh);
+  background:var(--green-d);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+.navbtn{flex:1;border:none;background:none;color:#9fb5a6;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px;cursor:pointer;font-size:11px;font-weight:600;
+  border-top:3px solid transparent}
+.navbtn .g{font-size:17px;line-height:1}
+.navbtn .zh{font-size:9.5px;color:inherit;opacity:.8}
+.navbtn.on{color:#fff;border-top-color:var(--gold);background:rgba(255,255,255,.05)}
+
+/* generic */
+.btn{padding:9px 15px;border-radius:9px;font-size:13.5px;cursor:pointer;border:1px solid var(--green);
+  background:var(--green);color:#fff;font-weight:600}
+.btn.ghost{background:#fff;color:var(--green)}
+.btn.sm{padding:5px 10px;font-size:12px;border-radius:7px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.block{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px;margin-bottom:13px;box-shadow:var(--shadow)}
+.block h3{margin:0 0 11px;font-size:14px;color:var(--green-d)}
+.block h3 .zh{font-size:12px;color:var(--muted);font-weight:600;margin-left:5px}
+.empty{padding:28px;text-align:center;color:var(--muted);font-size:13px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11.5px;color:var(--muted)}
+.field input,.field textarea,.field select{padding:9px 11px;border:1px solid var(--line);border-radius:8px;
+  background:#fff;font-size:14px;color:var(--ink);font-family:inherit;width:100%}
+.field textarea{min-height:60px;resize:vertical}
+.field input:focus,.field textarea:focus{outline:2px solid var(--green);border-color:var(--green)}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:11px}
+
+/* ===== ORDER ===== */
+.weekbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:12px}
+.weekbar label{font-size:12px;color:var(--muted)}
+.weekbar input{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px;font-family:inherit}
+.setcard{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px;margin-bottom:13px;box-shadow:var(--shadow)}
+.set-h{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.set-h .badge{background:var(--green-d);color:#fff;border-radius:8px;padding:3px 11px;font-size:13.5px;font-weight:700}
+.set-h .done{font-size:12px;color:var(--veg);font-weight:600}
+.set-h .partial{font-size:12px;color:var(--gold)}
+.set-h .rm{margin-left:auto;border:none;background:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline}
+.slot{display:flex;gap:10px;border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;cursor:pointer;background:#fff}
+.slot.filled{border-style:solid;border-color:#cfe0d4;cursor:default}
+.slot .ico{font-size:17px;width:22px;text-align:center;flex:none;padding-top:2px}
+.slot .body{flex:1;min-width:0}
+.slot .stype{font-size:10px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+.slot .stype .z{font-size:10.5px;text-transform:none;letter-spacing:0;margin-left:4px}
+.slot .empty2{font-size:14px;color:var(--gold);font-weight:600;margin-top:2px}
+.slot .empty2 .z{color:var(--muted);font-weight:400;font-size:12px;margin-left:4px}
+.slot .dish{display:flex;align-items:center;gap:7px;margin-top:2px}
+.slot .dish .c{font-size:12.5px;font-weight:700;color:#fff;background:var(--green-d);padding:1px 7px;border-radius:6px;flex:none}
+.slot .dish .c.std{background:var(--gold)}
+.slot .dish .nm{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .nmz{font-size:11.5px;color:var(--muted);margin-top:1px}
+.slot .dalg{font-size:10.5px;color:var(--warn);margin-top:3px}
+.slot .act{flex:none;display:flex;align-items:center;gap:7px}
+.slot .chg{font-size:12px;color:var(--green);text-decoration:underline}
+.slot .clr{border:none;background:none;color:var(--warn);font-size:18px;cursor:pointer;line-height:1}
+.slot .go{font-size:18px;color:var(--green);align-self:center}
+.addset{width:100%;border:1px dashed var(--green);background:#fff;color:var(--green);padding:11px;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer}
+.orderfoot{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.orderfoot .stat{font-size:12.5px;color:var(--muted)}
+
+/* ===== sheet (picker / data) ===== */
+.scrim{position:fixed;inset:0;background:rgba(20,30,24,.45);z-index:60;display:none}
+.scrim.open{display:block}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--paper);
+  border-radius:16px 16px 0 0;max-height:90vh;display:flex;flex-direction:column;
+  transform:translateY(100%);transition:.24s}
+.sheet.open{transform:translateY(0)}
+.sheet-h{padding:13px 16px 9px;border-bottom:1px solid var(--line)}
+.sheet-h .row1{display:flex;align-items:center;gap:10px}
+.sheet-h h2{margin:0;font-size:16px;font-weight:700}
+.sheet-h h2 .z{font-size:12.5px;color:var(--muted);font-weight:600;margin-left:5px}
+.sheet-h .x{margin-left:auto;border:none;background:none;font-size:24px;color:var(--muted);cursor:pointer;line-height:1}
+.sheet-h input[type=search]{width:100%;margin-top:9px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:15px;font-family:inherit}
+.pftoggle{margin-top:8px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--green-d);font-weight:600;cursor:pointer}
+.pftoggle .fc{background:var(--gold);color:#fff;border-radius:999px;padding:0 7px;font-size:10.5px;margin-left:5px}
+.pftoggle .fc.zero{display:none}
+.pfilters{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.pfilters.collapsed{display:none}
+.frow{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.frow .fl{font-size:10.5px;color:var(--muted);min-width:84px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:4px 10px;border-radius:999px;font-size:12px;cursor:pointer;user-select:none}
+.chip .z{color:var(--muted);font-size:10.5px;margin-left:3px}
+.chip.on{background:var(--green);color:#fff;border-color:var(--green)}
+.chip.on .z{color:#cfe0d4}
+.chip.veg.on{background:var(--veg);border-color:var(--veg)}
+.chip.alg.on{background:var(--warn);border-color:var(--warn)}
+.plist{overflow:auto;padding:8px 12px 18px;flex:1}
+.pcount{font-size:11px;color:var(--muted);padding:4px 6px;display:flex;align-items:center;gap:10px}
+.pcount .toggleav{margin-left:auto;color:var(--green);text-decoration:underline;cursor:pointer}
+.prow{display:flex;align-items:flex-start;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:9px 11px;margin-bottom:6px;cursor:pointer}
+.prow.cur{border-color:var(--green);box-shadow:0 0 0 2px var(--green) inset}
+.prow.avoid{opacity:.55}
+.prow .c{font-size:12.5px;font-weight:700;color:#fff;background:var(--green-d);padding:2px 8px;border-radius:6px;flex:none;margin-top:1px}
+.prow .c.std{background:var(--gold)}
+.prow .b{flex:1;min-width:0}
+.prow .en{font-size:14.5px;font-weight:600}
+.prow .zhn{font-size:12px;color:var(--muted)}
+.prow .dsc{font-size:11.5px;color:#4a4a42;margin-top:2px}
+.prow .meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px;align-items:center}
+.prow .mk{font-size:10.5px;border-radius:999px;padding:1px 8px;font-weight:600}
+.prow .mk.want{color:#fff;background:var(--want)}
+.prow .mk.stock{color:var(--green-d);background:#d7ead d;border:1px solid #bcd9c8}
+.prow .mk.stk{color:var(--green-d);background:#d7eadd;border:1px solid #bcd9c8}
+.prow .mk.alg{color:var(--warn);background:#f3dcd7}
+.prow .mk.veg{color:var(--veg);border:1px solid var(--veg)}
+.prow .pick{flex:none;color:var(--green);font-size:19px;margin-top:1px}
+
+/* ===== MENU browse ===== */
+.searchbar input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:15px;font-family:inherit}
+.fbar{width:100%;margin-top:9px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);cursor:pointer;font-size:13px;color:var(--green-d);font-weight:600}
+.fbar .fc{background:var(--gold);color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;margin-left:6px}
+.fbar .fc.zero{display:none}
+.facets{margin-top:10px;display:flex;flex-direction:column;gap:7px}
+.facets.collapsed{display:none}
+.menubar2{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:9px 0;flex-wrap:wrap}
+.menubar2 .rc{font-size:12px;color:var(--muted)}
+.menubar2 .clr{background:none;border:none;color:var(--gold);font-size:12px;cursor:pointer;text-decoration:underline}
+.section-h{margin:18px 0 9px;display:flex;align-items:baseline;gap:9px;border-bottom:2px solid var(--green);padding-bottom:5px}
+.section-h h4{margin:0;font-size:14px;color:var(--green-d)}
+.section-h h4 .z{font-size:11.5px;color:var(--muted);font-weight:600;margin-left:5px}
+.section-h .n{font-size:11.5px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.mcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.mcard .crow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.mcard .code{font-size:14px;font-weight:700;color:#fff;background:var(--green-d);padding:2px 8px;border-radius:6px}
+.mcard .code.std{background:var(--gold)}
+.mcard .ltag{font-size:10px;color:var(--muted)}
+.mcard .stk{margin-left:auto;font-size:10.5px;color:var(--green-d);background:#d7eadd;border:1px solid #bcd9c8;border-radius:999px;padding:1px 8px;font-weight:600}
+.mcard .en{font-size:15px;font-weight:700;line-height:1.3}
+.mcard .zhn{font-size:12px;color:var(--muted);margin-bottom:5px}
+.mcard .dsc{font-size:12px;color:#3b403a;margin:0 0 4px}
+.mcard .dscz{font-size:11.5px;color:var(--muted);margin:0 0 8px}
+.mcard .alg{font-size:11px;color:var(--warn);margin:0 0 10px}
+.mcard .alg.none{color:var(--veg)}
+.mcard .seg{display:flex;gap:5px;margin-top:auto}
+.mcard .seg button{flex:1;border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:7px;padding:6px;font-size:12px;cursor:pointer}
+.mcard .seg button.on.want{background:var(--want);color:#fff;border-color:var(--want)}
+.mcard .seg button.on.neu{background:var(--muted);color:#fff;border-color:var(--muted)}
+.mcard .seg button.on.rej{background:var(--reject);color:#fff;border-color:var(--reject)}
+
+/* ===== STOCK ===== */
+.addrow{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.addrow .field.code{flex:1;min-width:170px}
+.cartline{display:flex;gap:8px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin-bottom:6px;font-size:13px}
+.cartline .x{margin-left:auto;border:none;background:none;color:var(--warn);font-size:16px;cursor:pointer}
+.stockgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.scard{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px 12px}
+.scard.neg{border-color:var(--warn)}
+.scard .top{display:flex;align-items:center;gap:8px}
+.scard .c{font-size:12.5px;font-weight:700;color:#fff;background:var(--green-d);padding:2px 7px;border-radius:6px}
+.scard .c.std{background:var(--gold)}
+.scard .qty{margin-left:auto;font-size:18px;font-weight:700}
+.scard .qty.neg{color:var(--warn)}
+.scard .nm{font-size:13px;font-weight:600;margin-top:5px}
+.scard .zhn{font-size:11px;color:var(--muted)}
+.scard .ops{display:flex;gap:6px;margin-top:9px;align-items:center}
+.scard .ops .lbl{font-size:10.5px;color:var(--muted);margin-right:auto}
+
+/* logs / accordion */
+.log{list-style:none;margin:0;padding:0}
+.logitem{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.logitem .top{display:flex;align-items:center;gap:10px;font-size:13px}
+.logitem .date{font-weight:700;color:var(--green-d)}
+.logitem .del{margin-left:auto;border:none;background:none;color:var(--warn);font-size:12px;cursor:pointer;text-decoration:underline}
+.logitem .codes{margin-top:6px;display:flex;flex-wrap:wrap;gap:5px}
+.logitem .codes span{font-size:12px;background:var(--chip);border-radius:6px;padding:2px 8px}
+.logitem .note{font-size:12px;color:var(--muted);margin-top:5px}
+.acc{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:11px;overflow:hidden}
+.acc>summary{padding:13px 15px;font-size:14px;font-weight:600;color:var(--green-d);cursor:pointer;list-style:none;display:flex;align-items:center}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary .zh{font-size:12px;color:var(--muted);font-weight:400;margin-left:5px}
+.acc>summary .cv{margin-left:auto;color:var(--muted);font-size:12px}
+.acc[open]>summary .cv{transform:rotate(180deg)}
+.acc .body{padding:0 15px 15px}
+
+.printonly{display:none}
+@media print{
+  .topbar,main,.bottomnav,.scrim,.sheet{display:none!important}
+  .printonly{display:block;padding:0 8mm}
+  body{background:#fff;color:#000}
+  .p-h{border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:12px}
+  .p-h h1{font-size:18px;margin:0}.p-h .meta{font-size:11px;color:#333;margin-top:3px}
+  .p-set{margin-bottom:14px;break-inside:avoid}
+  .p-set h3{font-size:14px;margin:0 0 5px;background:#eee;padding:4px 8px;border:1px solid #999}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{border:1px solid #999;padding:5px 7px;text-align:left;vertical-align:top}
+  th{background:#f3f3f3}.p-code{font-family:monospace;font-weight:700;white-space:nowrap}
+  .p-foot{margin-top:10px;font-size:10.5px;color:#444}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="ttl">Meal Hub<span class="zh">送餐中心</span></span>
+  <span class="sp"></span>
+  <span class="savedot" id="savedot"></span>
+  <button class="databtn" id="dataBtn">Data 数据</button>
+</div>
+
+<main>
+  <!-- ORDER -->
+  <section class="panel on" id="p-order">
+    <div class="h-row"><h2>This week<span class="zh">本周点餐</span></h2></div>
+    <p class="intro">One set = Main + Soup + Dessert. Choose 2–3 sets. 一套 = 主菜＋汤＋甜品，每周 2–3 套。</p>
+    <div class="weekbar">
+      <label for="wk">Delivery day 配送日</label>
+      <input id="wk" type="text" placeholder="e.g. Mon 30 Jun" autocomplete="off">
+    </div>
+    <div id="builder"></div>
+    <button class="addset" id="addset">＋ Add a third set 加第三套</button>
+    <div class="orderfoot">
+      <span class="stat" id="ostat"></span><span style="flex:1"></span>
+      <button class="btn ghost" id="clearOrder">Clear 清空</button>
+      <button class="btn" id="printOrder" disabled>Print 打印</button>
+    </div>
+  </section>
+
+  <!-- MENU -->
+  <section class="panel" id="p-menu">
+    <div class="h-row"><h2>Menu<span class="zh">菜单 · 浏览 / 标偏好</span></h2></div>
+    <div class="searchbar"><input id="mq" type="search" placeholder="Search code / English / 中文…"></div>
+    <button class="fbar" id="mToggleF"><span>Filters 筛选<span class="fc zero" id="mfc">0</span></span><span id="mChev">▾</span></button>
+    <div class="facets collapsed" id="mFacets"></div>
+    <div class="menubar2"><span class="rc" id="mrc">—</span><button class="clr" id="mClr">Clear filters 清除</button></div>
+    <div id="menuList"></div>
+  </section>
+
+  <!-- STOCK -->
+  <section class="panel" id="p-stock">
+    <div class="h-row"><h2>Stock<span class="zh">存货</span></h2></div>
+    <p class="intro">Stock = deliveries − consumption ± adjust. 当前存货由收货与消耗自动计算。</p>
+    <details class="acc" id="delivAcc">
+      <summary>＋ Record a delivery<span class="zh">登记收货</span><span class="cv">▾</span></summary>
+      <div class="body">
+        <div class="addrow">
+          <div class="field" style="width:150px"><label>Date 日期</label><input type="date" id="delivDate"></div>
+          <div class="field code"><label>Dish 餐码/菜名</label><input list="codeList" id="delivCode" placeholder="code or name"></div>
+          <div class="field" style="width:80px"><label>Qty 份</label><input type="number" id="delivQty" value="1" min="1"></div>
+          <button class="btn ghost" id="delivAddItem">Add 加项</button>
+        </div>
+        <div id="delivCart" style="margin-top:10px"></div>
+        <div class="field" style="margin-top:8px"><label>Note 备注</label><input id="delivNote"></div>
+        <button class="btn" id="delivSave" style="margin-top:10px">Save delivery 保存收货</button>
+      </div>
+    </details>
+    <div id="stockBox"></div>
+  </section>
+
+  <!-- MORE -->
+  <section class="panel" id="p-more">
+    <div class="h-row"><h2>More<span class="zh">更多</span></h2></div>
+
+    <details class="acc" open>
+      <summary>Profile &amp; contract<span class="zh">档案与合同</span><span class="cv">▾</span></summary>
+      <div class="body">
+        <div class="block" style="box-shadow:none;border:none;padding:0;margin-bottom:14px">
+          <h3>Supplier &amp; account<span class="zh">供应商与账户</span></h3>
+          <div class="fgrid" id="profFields"></div>
+        </div>
+        <div class="block" style="box-shadow:none;border:none;padding:0">
+          <h3>Contract terms<span class="zh">合同条件</span></h3>
+          <div class="fgrid" id="contractFields"></div>
+        </div>
+      </div>
+    </details>
+
+    <details class="acc">
+      <summary>Delivery history<span class="zh">收货记录</span><span class="cv">▾</span></summary>
+      <div class="body"><ul class="log" id="delivLog"></ul></div>
+    </details>
+
+    <details class="acc">
+      <summary>Consumption history<span class="zh">消耗记录</span><span class="cv">▾</span></summary>
+      <div class="body">
+        <div class="addrow" style="margin-bottom:12px">
+          <div class="field" style="width:150px"><label>Date 日期</label><input type="date" id="consDate"></div>
+          <div class="field code"><label>Dish 餐码/菜名</label><input list="codeList" id="consCode" placeholder="code or name"></div>
+          <div class="field" style="width:80px"><label>Qty 份</label><input type="number" id="consQty" value="1" min="1"></div>
+          <button class="btn" id="consSave">Log 记录</button>
+        </div>
+        <ul class="log" id="consLog"></ul>
+      </div>
+    </details>
+
+    <details class="acc">
+      <summary>Data &amp; backup<span class="zh">数据与备份</span><span class="cv">▾</span></summary>
+      <div class="body">
+        <p class="intro">Your records live in one JSON file you own. Export to Google Drive; import to continue. 你的记录是一个你拥有的 JSON 文件，导出到 Drive、下次导入续用。</p>
+        <div style="display:flex;gap:9px;flex-wrap:wrap">
+          <button class="btn ghost" id="btnImport2">Import 导入</button>
+          <button class="btn" id="btnExport2">Export 导出</button>
+        </div>
+        <p class="intro" id="dataStat2" style="margin-top:10px"></p>
+      </div>
+    </details>
+  </section>
+</main>
+
+<nav class="bottomnav" id="nav">
+  <button class="navbtn on" data-p="order"><span class="g">🛒</span>Order<span class="zh">点餐</span></button>
+  <button class="navbtn" data-p="menu"><span class="g">📖</span>Menu<span class="zh">菜单</span></button>
+  <button class="navbtn" data-p="stock"><span class="g">🧊</span>Stock<span class="zh">存货</span></button>
+  <button class="navbtn" data-p="more"><span class="g">⚙️</span>More<span class="zh">更多</span></button>
+</nav>
+
+<!-- data sheet -->
+<div class="scrim" id="dataScrim"></div>
+<div class="sheet" id="dataSheet">
+  <div class="sheet-h"><div class="row1"><h2>Data 数据</h2><button class="x" id="dataClose">×</button></div></div>
+  <div style="padding:16px">
+    <p class="intro" id="dataStat"></p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn ghost" id="btnImport">Import 导入</button>
+      <button class="btn" id="btnExport">Export 导出</button>
+    </div>
+    <p class="intro" style="margin-top:14px">Records are saved to a JSON file you own (data sovereignty). 记录存为你拥有的 JSON；改动后记得导出。</p>
+  </div>
+</div>
+
+<!-- picker sheet (order) -->
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-h">
+    <div class="row1"><h2 id="sheetTitle">Choose</h2><button class="x" id="sheetClose">×</button></div>
+    <input id="psearch" type="search" placeholder="Search code, English or 中文…">
+    <div class="pftoggle" id="pftoggle"><span>Filters 筛选<span class="fc zero" id="pfcount">0</span></span><span id="pfchev">▾</span></div>
+    <div class="pfilters collapsed" id="pfilters"></div>
+  </div>
+  <div class="plist" id="plist"></div>
+</div>
+
+<input type="file" id="fileIn" accept="application/json,.json" style="display:none">
+<datalist id="codeList"></datalist>
+<div class="printonly" id="printArea"></div>
+
+<script>
+const MENU={"source": "Lite n' Easy My Choice CHSP Menu 2026", "note": "餐码 code 为主键。name_en/desc_en 为菜单原文，name_zh/desc_zh 为辅助理解的中文。落单前请以包装标签为准。", "count": 100, "items": [{"code": "01", "line": "standard", "cat": "dinner", "name_en": "Spaghetti Bolognaise", "name_zh": "意式肉酱意粉", "desc_en": "Al dente spaghetti with a rich, homestyle ground beef Bolognaise sauce, topped with grated parmesan cheese.", "desc_zh": "弹牙意粉配家乡式免治牛肉酱，撒帕玛森芝士。", "protein": ["牛肉"], "base": ["意面"], "method": ["意面"], "veg": "番茄肉酱", "vegetarian": false, "allergens": ["gluten", "wheat", "milk"]}, {"code": "04", "line": "standard", "cat": "dinner", "name_en": "Corned Beef", "name_zh": "咸牛肉配白汁", "desc_en": "Tender slices of corned beef topped with creamy white sauce, served with steamed vegetables and mashed potato.", "desc_zh": "咸牛肉片配忌廉白汁，配蒸蔬菜及薯蓉。", "protein": ["牛肉"], "base": ["薯类"], "method": ["慢煮"], "veg": "蒸蔬菜·薯蓉", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "08", "line": "standard", "cat": "dinner", "name_en": "Hearty Beef Casserole", "name_zh": "丰盛炖牛肉", "desc_en": "Tender slow cooked beef in our signature stock with chunky winter vegetables and mashed potato.", "desc_zh": "慢煮嫩牛肉配招牌高汤、冬日杂菜及薯蓉。", "protein": ["牛肉"], "base": ["薯类"], "method": ["慢煮", "炖焖"], "veg": "冬日杂菜·薯蓉", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "10", "line": "standard", "cat": "dinner", "name_en": "Sweet & Sour Chicken", "name_zh": "甜酸鸡(咕噜)", "desc_en": "A stir fry of tender, marinated chicken pieces and Asian vegetables in a sweet and sour sauce served with rice.", "desc_zh": "腌嫩鸡块炒亚洲蔬菜配甜酸汁，配饭。", "protein": ["鸡肉"], "base": ["米饭"], "method": ["炒"], "veg": "亚洲杂菜", "vegetarian": false, "allergens": ["gluten", "wheat", "mollusc", "soy", "sesame"]}, {"code": "14", "line": "standard", "cat": "dinner", "name_en": "Roast Beef", "name_zh": "烤牛肉", "desc_en": "Slices of tender roast beef served with a traditional rich gravy, golden roasted potatoes, cauliflower mornay, sweet potato, carrots and peas.", "desc_zh": "嫩烤牛肉片配传统浓肉汁、烤金薯、椰菜花焗、番薯、红萝卜及青豆。", "protein": ["牛肉"], "base": ["薯类"], "method": ["烤焗"], "veg": "烤薯·椰菜花焗·根菜", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "18", "line": "standard", "cat": "dinner", "name_en": "Roast Chicken", "name_zh": "烤鸡", "desc_en": "Tender oven roasted chicken breast with a traditional gravy, served with roasted vegetables and cauliflower gratin.", "desc_zh": "烤鸡胸配传统肉汁，配烤蔬菜及椰菜花焗。", "protein": ["鸡肉"], "base": ["薯类"], "method": ["烤焗"], "veg": "烤蔬菜·椰菜花焗", "vegetarian": false, "allergens": ["gluten", "wheat", "milk"]}, {"code": "29", "line": "standard", "cat": "dinner", "name_en": "Savoury Beef Rissoles", "name_zh": "家乡牛肉饼", "desc_en": "Comfort food at its best. Homestyle Aussie beef rissoles, creamy mashed potato and steamed vegetables finished with our signature gravy.", "desc_zh": "家乡澳洲牛肉饼配忌廉薯蓉、蒸蔬菜及招牌肉汁。", "protein": ["牛肉"], "base": ["薯类"], "method": ["炭烤"], "veg": "薯蓉·蒸蔬菜", "vegetarian": false, "allergens": ["gluten", "wheat", "milk", "soy"]}, {"code": "49", "line": "standard", "cat": "dinner", "name_en": "Chicken Dijon", "name_zh": "法式第戎芥末鸡", "desc_en": "This timeless, French inspired dish combines tender oven baked chicken pieces and vegetables in a smooth Dijon mustard sauce served with wild rice mix.", "desc_zh": "法式焗鸡块及蔬菜配顺滑第戎芥末汁，配野米饭。", "protein": ["鸡肉"], "base": ["米饭"], "method": ["烤焗"], "veg": "蔬菜·野米饭", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "50", "line": "standard", "cat": "dinner", "name_en": "Sausages with Onion Gravy", "name_zh": "洋葱汁香肠", "desc_en": "Prime beef sausages smothered in a traditional onion gravy, served with creamy mashed potato and vegetables.", "desc_zh": "优质牛肉肠淋传统洋葱汁，配忌廉薯蓉及蔬菜。", "protein": ["牛肉"], "base": ["薯类"], "method": ["炖焖"], "veg": "薯蓉·蔬菜", "vegetarian": false, "allergens": ["gluten", "wheat", "milk", "soy"]}, {"code": "54", "line": "standard", "cat": "dinner", "name_en": "Homestyle Macaroni Cheese", "name_zh": "家乡芝士通心粉", "desc_en": "Macaroni pasta smothered in a delicious creamy sauce and topped with diced roma tomato, golden bread crumbs and parmesan cheese.", "desc_zh": "通心粉裹忌廉芝士酱，铺罗马番茄粒、金黄面包糠及帕玛森芝士。", "protein": ["素"], "base": ["意面"], "method": ["焗", "意面"], "veg": "番茄·芝士", "vegetarian": true, "allergens": ["gluten", "wheat", "milk", "almond"]}, {"code": "57", "line": "standard", "cat": "dinner", "name_en": "Tortilla Stack", "name_zh": "墨西哥千层卷(素)", "desc_en": "A delicious Mexican blend of beans and vegetables in a mild tomato salsa, folded between layers of lightly baked lavash bread.", "desc_zh": "墨西哥风味豆类及蔬菜配微辣番茄莎莎，夹于轻焗薄饼层之间。", "protein": ["素"], "base": ["面包"], "method": ["焗"], "veg": "豆类·蔬菜", "vegetarian": true, "allergens": ["gluten", "wheat", "milk"]}, {"code": "72", "line": "standard", "cat": "dinner", "name_en": "Spinach & Ricotta Tortelloni", "name_zh": "菠菜芝士云吞面", "desc_en": "An original Italian favourite combining a smooth spinach and ricotta mix encased in tortelloni shells served with a creamy cheese sauce, broccoli and sweetcorn.", "desc_zh": "菠菜及瑞可塔芝士馅意式云吞，配忌廉芝士汁、西兰花及甜粟米。", "protein": ["素"], "base": ["意面"], "method": ["意面"], "veg": "西兰花·甜粟米", "vegetarian": true, "allergens": ["gluten", "wheat", "milk"]}, {"code": "77", "line": "standard", "cat": "dinner", "name_en": "Roast Pork", "name_zh": "烤猪肉配苹果", "desc_en": "Tender slices of roast pork in a traditional rich gravy, topped with poached apples, served with roasted vegetables and a cauliflower & pea gratin.", "desc_zh": "烤猪肉片淋传统浓肉汁，铺炖苹果，配烤蔬菜及椰菜花青豆焗。", "protein": ["猪肉"], "base": ["薯类"], "method": ["烤焗"], "veg": "烤蔬菜·椰菜花焗", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "82", "line": "standard", "cat": "dinner", "name_en": "Beef Korma", "name_zh": "印度咖喱牛肉(Korma)", "desc_en": "A classic Indian dish made with slow cooked, tender pieces of beef simmered in an aromatic korma sauce and served with turmeric rice.", "desc_zh": "经典印度慢煮嫩牛肉配香浓 Korma 咖喱汁，配姜黄饭。", "protein": ["牛肉"], "base": ["米饭"], "method": ["咖喱", "慢煮"], "veg": "姜黄饭", "vegetarian": false, "allergens": ["milk"]}, {"code": "134", "line": "standard", "cat": "dinner", "name_en": "Spaghetti Marinara", "name_zh": "海鲜意粉", "desc_en": "Al dente spaghetti with flakes of sustainably caught white fish, succulent prawns and calamari, tossed in a sweet tomato, garlic, ginger & chilli jam sauce.", "desc_zh": "弹牙意粉配白鱼、大虾及鱿鱼，裹甜番茄蒜姜辣椒酱。", "protein": ["鱼", "海鲜(虾蟹)"], "base": ["意面"], "method": ["意面"], "veg": "海鲜·番茄酱", "vegetarian": false, "allergens": ["gluten", "wheat", "crustacean", "fish", "mollusc", "milk"]}, {"code": "173", "line": "standard", "cat": "dinner", "name_en": "Tasmanian Salmon Pasta", "name_zh": "塔斯曼三文鱼意粉", "desc_en": "Tasmanian salmon and fettuccine in a delicious white sauce with tomato, herbs and broccoli topped with parmesan cheese.", "desc_zh": "塔斯曼三文鱼及宽意粉配白汁、番茄、香草及西兰花，撒帕玛森芝士。", "protein": ["鱼"], "base": ["意面"], "method": ["意面"], "veg": "番茄·西兰花", "vegetarian": false, "allergens": ["gluten", "wheat", "crustacean", "fish", "milk"]}, {"code": "180", "line": "standard", "cat": "dinner", "name_en": "Shepherd's Pie", "name_zh": "牧羊人派", "desc_en": "Prime ground beef in a delicious gravy, topped with creamy whipped potato then baked golden brown and served with seasonal vegetables.", "desc_zh": "免治牛肉配浓肉汁，铺忌廉薯蓉焗至金黄，配时令蔬菜。", "protein": ["牛肉"], "base": ["薯类"], "method": ["焗"], "veg": "薯蓉·时蔬", "vegetarian": false, "allergens": ["gluten", "fish", "milk"]}, {"code": "181", "line": "standard", "cat": "dinner", "name_en": "Butter Chicken", "name_zh": "印度牛油鸡", "desc_en": "A classic Indian favourite combining tender chicken pieces in a delicious, authentic mild creamy sauce, served with fluffy basmati rice.", "desc_zh": "经典印度牛油鸡，嫩鸡块配香浓微辣忌廉酱，配香米饭。", "protein": ["鸡肉"], "base": ["米饭"], "method": ["咖喱"], "veg": "香米饭", "vegetarian": false, "allergens": ["gluten", "milk", "almond"]}, {"code": "183", "line": "standard", "cat": "dinner", "name_en": "Chicken Parmigiana", "name_zh": "帕玛森芝士焗鸡排", "desc_en": "An Aussie favourite combining a tender crumbed chicken breast topped with ham, parmesan cheese and a rich tomato sauce, served with roasted potatoes and vegetables.", "desc_zh": "脆皮鸡胸铺火腿、帕玛森芝士及浓番茄酱，配烤薯仔及蔬菜。", "protein": ["鸡肉", "火腿/烟肉"], "base": ["薯类"], "method": ["裹粉", "焗"], "veg": "烤薯·蔬菜", "vegetarian": false, "allergens": ["gluten", "wheat", "egg", "milk"]}, {"code": "187", "line": "standard", "cat": "dinner", "name_en": "Chicken & Cashews", "name_zh": "腰果鸡丁", "desc_en": "Stir-fried pieces of chicken breast and crisp vegetables, topped with whole cashews and served with steamed rice.", "desc_zh": "炒鸡胸片配爽脆蔬菜，撒整粒腰果，配蒸饭。", "protein": ["鸡肉"], "base": ["米饭"], "method": ["炒"], "veg": "杂菜·腰果", "vegetarian": false, "allergens": ["mollusc", "cashew", "sesame"]}, {"code": "189", "line": "standard", "cat": "dinner", "name_en": "Chargrilled Steak & Mushroom Sauce", "name_zh": "炭烤西冷配蘑菇汁", "desc_en": "Tender chargrilled rump steak, topped with creamy mushroom sauce, served with seasoned roast potatoes and spring vegetables.", "desc_zh": "炭烤嫩西冷牛排配忌廉蘑菇汁，配香烤薯仔及春日蔬菜。", "protein": ["牛肉"], "base": ["薯类"], "method": ["炭烤"], "veg": "烤薯·春蔬", "vegetarian": false, "allergens": ["milk"]}, {"code": "194", "line": "standard", "cat": "dinner", "name_en": "Thai Red Chicken Curry", "name_zh": "泰式红咖喱鸡", "desc_en": "A traditional red Thai curry with tender chicken breast pieces and Thai-style vegetables in a mild sauce, served with rice.", "desc_zh": "传统泰式红咖喱配嫩鸡胸及泰式蔬菜，微辣，配饭。", "protein": ["鸡肉"], "base": ["米饭"], "method": ["咖喱"], "veg": "泰式蔬菜", "vegetarian": false, "allergens": ["crustacean", "fish"]}, {"code": "195", "line": "standard", "cat": "dinner", "name_en": "Slow Cooked Lamb", "name_zh": "慢煮羊肉", "desc_en": "Tender pieces of slow cooked lamb in a hearty homestyle gravy with creamy mashed potato, sweet potato and greens.", "desc_zh": "慢煮嫩羊肉配丰盛家乡肉汁、忌廉薯蓉、番薯及青蔬。", "protein": ["羊肉"], "base": ["薯类"], "method": ["慢煮"], "veg": "薯蓉·番薯·青蔬", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "199", "line": "standard", "cat": "dinner", "name_en": "Lamb Roast", "name_zh": "烤羊肉", "desc_en": "Tender slices of roast lamb cooked to perfection then served with roast potatoes and traditional veggies and finished with a delicious gravy we make from scratch.", "desc_zh": "烤羊肉片配烤薯仔及传统蔬菜，淋自家熬制肉汁。", "protein": ["羊肉"], "base": ["薯类"], "method": ["烤焗"], "veg": "烤薯·传统蔬菜", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "207", "line": "standard", "cat": "dinner", "name_en": "Chicken Fettuccine with Baby Broccoli", "name_zh": "西兰花鸡肉意粉", "desc_en": "Al dente fettuccine pasta combined with roasted chicken, zucchini and baby broccoli in a tasty parmesan cheese sauce.", "desc_zh": "宽意粉配烤鸡、翠玉瓜及嫩西兰花，裹帕玛森芝士酱。", "protein": ["鸡肉"], "base": ["意面"], "method": ["意面"], "veg": "翠玉瓜·西兰花", "vegetarian": false, "allergens": ["gluten", "wheat", "milk"]}, {"code": "212", "line": "standard", "cat": "dinner", "name_en": "Pepperoni Pasta", "name_zh": "辣肠意粉", "desc_en": "A modern twist on a Sicilian favourite combining al dente penne pasta with lightly spiced chicken pepperoni in a rich tomato and herb sauce.", "desc_zh": "西西里风味：通心意粉配微辣鸡肉辣肠，裹浓番茄香草酱。", "protein": ["鸡肉"], "base": ["意面"], "method": ["意面"], "veg": "番茄酱", "vegetarian": false, "allergens": ["gluten", "wheat", "milk"]}, {"code": "213", "line": "standard", "cat": "dinner", "name_en": "Vegetarian Potato and Chickpea Curry", "name_zh": "素薯仔鹰嘴豆咖喱", "desc_en": "A delicious, Indian inspired curry combining potatoes, chickpeas and lentils in a spiced sauce, topped with almond slivers and paired with brown rice and veggies.", "desc_zh": "印度风味咖喱：薯仔、鹰嘴豆及扁豆配香料汁，撒杏仁片，配糙米及蔬菜。", "protein": ["素"], "base": ["米饭"], "method": ["咖喱"], "veg": "糙米·蔬菜", "vegetarian": true, "allergens": ["milk", "almond"]}, {"code": "217", "line": "standard", "cat": "dinner", "name_en": "Pork Scallopini", "name_zh": "白酒蘑菇汁煎猪柳", "desc_en": "Tender slices of pork with a creamy white wine and mushroom sauce served with seasoned potato, carrots, baby broccoli and corn.", "desc_zh": "嫩猪柳片配忌廉白酒蘑菇汁，配香烤薯仔、红萝卜、嫩西兰花及粟米。", "protein": ["猪肉"], "base": ["薯类"], "method": ["香煎"], "veg": "烤薯·西兰花·粟米", "vegetarian": false, "allergens": ["gluten", "wheat", "milk", "pine_nut"]}, {"code": "219", "line": "standard", "cat": "dinner", "name_en": "Pesto Fettuccine", "name_zh": "青酱意粉(素)", "desc_en": "Al dente fettuccine pasta, pumpkin, peas, zucchini and semi dried tomatoes in a delicious pesto cream sauce.", "desc_zh": "宽意粉配南瓜、青豆、翠玉瓜及半干番茄，裹青酱忌廉汁。", "protein": ["素"], "base": ["意面"], "method": ["意面"], "veg": "南瓜·翠玉瓜·番茄", "vegetarian": true, "allergens": ["gluten", "wheat", "milk", "pine_nut"]}, {"code": "222", "line": "standard", "cat": "dinner", "name_en": "Coconut Beef Curry", "name_zh": "椰汁咖喱牛肉", "desc_en": "Tender pieces of beef slowly cooked in a creamy, coconut style curry served with a mix of brown rice and red quinoa, pumpkin and zucchini.", "desc_zh": "慢煮嫩牛肉配忌廉椰汁咖喱，配糙米红藜麦、南瓜及翠玉瓜。", "protein": ["牛肉"], "base": ["米饭"], "method": ["咖喱", "慢煮"], "veg": "糙米藜麦·南瓜", "vegetarian": false, "allergens": ["fish"]}, {"code": "226", "line": "standard", "cat": "dinner", "name_en": "Parmesan Crusted Fish", "name_zh": "帕玛森芝士脆皮鱼", "desc_en": "Lightly steamed sustainably sourced NZ Hoki, topped with a parmesan and herb crust, paired with a creamy lemon sauce, steamed greens, sweet potato and seasoned roast potato.", "desc_zh": "清蒸新西兰多利鱼铺帕玛森香草脆皮，配柠檬忌廉汁、青蔬、番薯及香烤薯仔。", "protein": ["鱼"], "base": ["薯类"], "method": ["清蒸", "裹粉"], "veg": "青蔬·番薯·烤薯", "vegetarian": false, "allergens": ["gluten", "wheat", "fish", "milk"]}, {"code": "227", "line": "standard", "cat": "dinner", "name_en": "Spicy Thai Green Chicken Curry", "name_zh": "泰式青咖喱鸡(微辣)", "desc_en": "Tender chicken and Thai style veggies in a spicy green curry sauce served with perfectly cooked rice.", "desc_zh": "嫩鸡肉及泰式蔬菜配香辣青咖喱汁，配饭。", "protein": ["鸡肉"], "base": ["米饭"], "method": ["咖喱"], "veg": "泰式蔬菜", "vegetarian": false, "allergens": ["fish"]}, {"code": "231", "line": "standard", "cat": "dinner", "name_en": "Roasted Mediterranean Vegetable Ravioli", "name_zh": "地中海烤蔬菜方饺(素)", "desc_en": "Al dente pasta pillows filled with a roasted vegetable and cheese mix, served on a bed of spinach in a traditional Napoli sauce and finished with a toasted almond and herb garnish.", "desc_zh": "烤蔬菜芝士馅意式方饺，铺于菠菜之上配传统拿坡里番茄酱，撒杏仁香草。", "protein": ["素"], "base": ["意面"], "method": ["意面"], "veg": "菠菜·番茄酱", "vegetarian": true, "allergens": ["gluten", "wheat", "egg", "milk", "almond", "pine_nut"]}, {"code": "239", "line": "standard", "cat": "dinner", "name_en": "Honey Soy Tofu & Vegetables", "name_zh": "蜜糖豉油豆腐时蔬(素)", "desc_en": "Oven roasted, marinated tofu pieces in an authentic honey soy sauce with stir fried vegetables and steamed rice.", "desc_zh": "烤腌豆腐块配蜜糖豉油汁及炒蔬菜，配蒸饭。", "protein": ["豆腐/素"], "base": ["米饭"], "method": ["炒"], "veg": "炒蔬菜", "vegetarian": true, "allergens": ["gluten", "wheat", "soy"]}, {"code": "241", "line": "standard", "cat": "dinner", "name_en": "Tofu Katsu Curry", "name_zh": "日式吉列豆腐咖喱(素)", "desc_en": "A Japanese favourite combining golden, lightly crumbed tofu in a traditional Japanese style curry with perfectly cooked rice.", "desc_zh": "日式风味：金黄脆皮豆腐配传统日式咖喱，配饭。", "protein": ["豆腐/素"], "base": ["米饭"], "method": ["咖喱", "裹粉"], "veg": "白饭", "vegetarian": true, "allergens": ["gluten", "wheat", "soy"]}, {"code": "242", "line": "standard", "cat": "dinner", "name_en": "Vegetarian Spaghetti Bolognaise", "name_zh": "素肉酱意粉", "desc_en": "Al dente spaghetti in a rich, vegetarian Bolognaise sauce, made with vegetarian mince, topped with tasty cheese and basil.", "desc_zh": "弹牙意粉配浓郁素肉酱(植物免治)，铺芝士及罗勒。", "protein": ["素"], "base": ["意面"], "method": ["意面"], "veg": "番茄素肉酱", "vegetarian": true, "allergens": ["gluten", "wheat", "milk"]}, {"code": "243", "line": "standard", "cat": "dinner", "name_en": "Thai Yellow Vegetable Curry", "name_zh": "泰式黄咖喱杂菜(素)", "desc_en": "Tender black beans with stir fried vegetables in an authentic Thai yellow curry sauce served with a wild rice blend and roasted cashews.", "desc_zh": "黑豆及炒蔬菜配正宗泰式黄咖喱汁，配野米饭及烤腰果。", "protein": ["素"], "base": ["米饭"], "method": ["咖喱"], "veg": "杂菜·腰果", "vegetarian": true, "allergens": ["soy", "cashew"]}, {"code": "244", "line": "standard", "cat": "dinner", "name_en": "Japanese Vegetable Stir Fry with Noodles", "name_zh": "日式炒蔬菜面(素)", "desc_en": "Stir fried edamame, tamari roasted peanuts and oriental vegetables tossed through noodles and a traditional sweet miso sauce.", "desc_zh": "炒毛豆、酱烤花生及东方蔬菜拌面，配甜味噌酱。", "protein": ["素"], "base": ["意面"], "method": ["炒"], "veg": "毛豆·东方蔬菜", "vegetarian": true, "allergens": ["gluten", "wheat", "peanut", "soy"]}, {"code": "245", "line": "standard", "cat": "dinner", "name_en": "Moroccan Pumpkin & Chickpeas with Pilaf Rice", "name_zh": "摩洛哥南瓜鹰嘴豆配香饭(素)", "desc_en": "Moroccan-spiced pumpkin, chickpeas, cauliflower and zucchini with sultanas and a touch of yoghurt, served with aromatic pilaf rice. [Description derived from ingredients — no photo entry in menu.]", "desc_zh": "摩洛哥风味：南瓜、鹰嘴豆、椰菜花及翠玉瓜配提子干及乳酪，配香饭(仅见于配料页)。", "protein": ["素"], "base": ["米饭"], "method": ["炖焖"], "veg": "南瓜·鹰嘴豆·香饭", "vegetarian": true, "allergens": ["milk"]}, {"code": "247", "line": "standard", "cat": "dinner", "name_en": "Vegetarian Chilli Beans with Turmeric Rice", "name_zh": "素辣豆配姜黄饭", "desc_en": "A Mexican inspired, mildly spiced mixed bean casserole served with an aromatic tomato, cucumber & turmeric rice.", "desc_zh": "墨西哥风味微辣杂豆煲，配香味番茄青瓜姜黄饭。", "protein": ["素"], "base": ["米饭"], "method": ["炖焖"], "veg": "杂豆·姜黄饭", "vegetarian": true, "allergens": ["milk", "soy"]}, {"code": "249", "line": "standard", "cat": "dinner", "name_en": "Greek Style Lentils", "name_zh": "希腊式扁豆(素)", "desc_en": "Al dente lentils simmered in a rich tomato & capsicum sauce, then served with herb roasted potatoes and steamed vegetables.", "desc_zh": "弹牙扁豆以浓番茄甜椒汁慢煮，配香草烤薯仔及蒸蔬菜。", "protein": ["素"], "base": ["薯类"], "method": ["炖焖"], "veg": "烤薯·蒸蔬菜", "vegetarian": true, "allergens": []}, {"code": "251", "line": "standard", "cat": "dinner", "name_en": "Spaghetti & Meatballs", "name_zh": "肉丸意粉", "desc_en": "Flame grilled meatballs with al dente spaghetti, smothered in full flavoured tomato sauce and topped with parmesan cheese.", "desc_zh": "火烤肉丸配弹牙意粉，裹浓味番茄酱，撒帕玛森芝士。", "protein": ["牛肉"], "base": ["意面"], "method": ["意面"], "veg": "番茄酱·肉丸", "vegetarian": false, "allergens": ["gluten", "wheat", "milk", "soy"]}, {"code": "11000", "line": "my_choice", "cat": "dinner", "name_en": "Spaghetti Bolognaise", "name_zh": "意式肉酱意粉", "desc_en": "Al dente spaghetti in a rich, home-style beef bolognaise sauce, topped with grated parmesan cheese.", "desc_zh": "弹牙意粉配家乡式牛肉番茄酱，撒帕玛森芝士。", "protein": ["牛肉"], "base": ["意面"], "method": ["意面"], "veg": "番茄肉酱", "vegetarian": false, "allergens": ["gluten", "wheat", "milk"]}, {"code": "11002", "line": "my_choice", "cat": "dinner", "name_en": "Beef Stroganoff", "name_zh": "俄式酸忌廉牛柳意粉", "desc_en": "Slow cooked tender strips of beef with al dente fettuccine pasta in a rich, creamy stroganoff sauce.", "desc_zh": "慢煮嫩牛柳配宽意粉，浓郁酸忌廉酱。", "protein": ["牛肉"], "base": ["意面"], "method": ["慢煮", "意面"], "veg": "忌廉酱", "vegetarian": false, "allergens": ["gluten", "wheat", "milk", "soy"]}, {"code": "11003", "line": "my_choice", "cat": "dinner", "name_en": "Slow Cooked Beef with Pepper Gravy", "name_zh": "慢煮牛肉配胡椒汁", "desc_en": "Slow cooked, tender strips of beef smothered in a creamy, mild-peppercorn gravy served with roasted vegetables, broccoli & green beans.", "desc_zh": "慢煮嫩牛肉淋微辣胡椒忌廉汁，配烤蔬菜、西兰花及青豆。", "protein": ["牛肉"], "base": ["薯类"], "method": ["慢煮"], "veg": "烤蔬菜·西兰花·青豆", "vegetarian": false, "allergens": ["gluten", "wheat", "milk"]}, {"code": "11004", "line": "my_choice", "cat": "dinner", "name_en": "Tasmanian Salmon with White Wine Sauce", "name_zh": "白酒汁塔斯曼三文鱼", "desc_en": "Lightly steamed pieces of Tasmanian Salmon in a delightful creamy white wine & parsley sauce served with a mixed vegetable mash, broccoli and peas.", "desc_zh": "清蒸三文鱼配忌廉白酒香芹汁，配杂菜薯蓉、西兰花及青豆。", "protein": ["鱼"], "base": ["薯类"], "method": ["清蒸"], "veg": "薯蓉·西兰花·青豆", "vegetarian": false, "allergens": ["gluten", "crustacean", "fish", "milk"]}, {"code": "11005", "line": "my_choice", "cat": "dinner", "name_en": "Sausages with Onion Gravy", "name_zh": "洋葱汁香肠", "desc_en": "Prime beef sausages smothered in a traditional onion gravy, served with creamy mashed potato and mixed vegetables.", "desc_zh": "优质牛肉肠淋传统洋葱汁，配忌廉薯蓉及杂菜。", "protein": ["牛肉"], "base": ["薯类"], "method": ["炖焖"], "veg": "薯蓉·杂菜", "vegetarian": false, "allergens": ["gluten", "wheat", "milk", "soy"]}, {"code": "11006", "line": "my_choice", "cat": "dinner", "name_en": "Parmesan Crusted Fish", "name_zh": "帕玛森芝士脆皮鱼", "desc_en": "Lightly steamed pieces of NZ Hoki smothered in a creamy lemon sauce, topped with a parmesan and herb crust and served with roasted vegetables and steamed greens.", "desc_zh": "清蒸新西兰多利鱼配柠檬忌廉汁，铺帕玛森香草脆皮，配烤蔬菜及青蔬。", "protein": ["鱼"], "base": ["薯类"], "method": ["清蒸", "裹粉"], "veg": "烤蔬菜·青蔬", "vegetarian": false, "allergens": ["gluten", "wheat", "fish", "milk"]}, {"code": "11007", "line": "my_choice", "cat": "dinner", "name_en": "Corned Beef", "name_zh": "咸牛肉配白汁", "desc_en": "Perfectly cooked in-house corned beef carved thick, then topped with a creamy white sauce with steamed vegetables and a golden mixed vegetable mash.", "desc_zh": "自家厚切咸牛肉淋忌廉白汁，配蒸蔬菜及金黄杂菜薯蓉。", "protein": ["牛肉"], "base": ["薯类"], "method": ["慢煮"], "veg": "蒸蔬菜·薯蓉", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "11008", "line": "my_choice", "cat": "dinner", "name_en": "Beef Bourguignon", "name_zh": "红酒炖牛肉(勃艮第)", "desc_en": "Slow cooked tender beef in a rich red wine, bacon & mushroom sauce, served with mashed potato and steamed vegetables.", "desc_zh": "慢煮嫩牛肉配红酒、烟肉及蘑菇汁，配薯蓉及蒸蔬菜。", "protein": ["牛肉", "火腿/烟肉"], "base": ["薯类"], "method": ["慢煮", "炖焖"], "veg": "薯蓉·蒸蔬菜", "vegetarian": false, "allergens": ["milk"]}, {"code": "11009", "line": "my_choice", "cat": "dinner", "name_en": "Curried Prawns with Pilaf Rice", "name_zh": "咖喱大虾配香饭", "desc_en": "Sustainably caught prawns cooked to perfection in a creamy, mild sweet curry served with an aromatic basmati and mixed vegetable rice.", "desc_zh": "可持续捕捞大虾配微甜忌廉咖喱，配香米杂菜饭。", "protein": ["海鲜(虾蟹)"], "base": ["米饭"], "method": ["咖喱"], "veg": "杂菜饭", "vegetarian": false, "allergens": ["gluten", "crustacean", "milk"]}, {"code": "11011", "line": "my_choice", "cat": "dinner", "name_en": "Pork Scallopini", "name_zh": "白酒蘑菇汁煎猪柳", "desc_en": "Tender slices of pork with a creamy white wine and mushroom sauce served with seasoned roasted potatoes, carrots, beans and corn.", "desc_zh": "嫩猪柳片配忌廉白酒蘑菇汁，配香烤薯仔、红萝卜、青豆及粟米。", "protein": ["猪肉"], "base": ["薯类"], "method": ["香煎"], "veg": "烤薯·红萝卜·青豆·粟米", "vegetarian": false, "allergens": ["gluten", "wheat", "milk"]}, {"code": "11012", "line": "my_choice", "cat": "dinner", "name_en": "Roast Pork", "name_zh": "烤猪肉配苹果", "desc_en": "Tender slices of roast pork in a traditional rich gravy, topped with poached apples, served with roasted vegetables and a cauliflower & pea gratin.", "desc_zh": "烤猪肉片淋传统浓肉汁，铺炖苹果，配烤蔬菜及椰菜花青豆焗。", "protein": ["猪肉"], "base": ["薯类"], "method": ["烤焗"], "veg": "烤蔬菜·椰菜花焗", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "11013", "line": "my_choice", "cat": "dinner", "name_en": "Roast Lamb", "name_zh": "烤羊肉配薄荷冻", "desc_en": "Tender slow cooked slices of lamb smothered in our signature gravy and topped with a dollop of mint jelly, then served with roast potato, steamed vegetables and a cauliflower gratin.", "desc_zh": "慢烤嫩羊肉片淋招牌肉汁，配薄荷冻、烤薯、蒸蔬菜及椰菜花焗。", "protein": ["羊肉"], "base": ["薯类"], "method": ["烤焗", "慢煮"], "veg": "烤薯·蒸蔬菜·椰菜花焗", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "11014", "line": "my_choice", "cat": "dinner", "name_en": "Roast Beef", "name_zh": "烤牛肉", "desc_en": "Slices of tender roast beef smothered in our signature gravy, served with roasted vegetables and a cauliflower & pea gratin.", "desc_zh": "嫩烤牛肉片淋招牌肉汁，配烤蔬菜及椰菜花青豆焗。", "protein": ["牛肉"], "base": ["薯类"], "method": ["烤焗"], "veg": "烤蔬菜·椰菜花焗", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "11015", "line": "my_choice", "cat": "dinner", "name_en": "Slow Cooked Lamb", "name_zh": "慢煮羊肉", "desc_en": "Tender pieces of slow cooked lamb in a hearty homestyle gravy with creamy mashed potato, peas, beans & carrot.", "desc_zh": "慢煮嫩羊肉配丰盛家乡肉汁，配忌廉薯蓉、青豆、四季豆及红萝卜。", "protein": ["羊肉"], "base": ["薯类"], "method": ["慢煮"], "veg": "薯蓉·青豆·红萝卜", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "11016", "line": "my_choice", "cat": "dinner", "name_en": "Shepherd's Pie", "name_zh": "牧羊人派(免治牛肉)", "desc_en": "Prime ground beef in a delicious gravy, topped with creamy whipped potato and parmesan cheese then baked golden brown.", "desc_zh": "免治牛肉配浓肉汁，铺忌廉薯蓉及帕玛森芝士，焗至金黄。", "protein": ["牛肉"], "base": ["薯类"], "method": ["焗"], "veg": "薯蓉面层", "vegetarian": false, "allergens": ["gluten", "fish", "milk"]}, {"code": "11017", "line": "my_choice", "cat": "dinner", "name_en": "Spaghetti Carbonara", "name_zh": "卡邦尼忌廉意粉", "desc_en": "A true Italian classic combining bacon, mushrooms, cheese and al dente spaghetti with a delicious creamy carbonara sauce.", "desc_zh": "经典意式：烟肉、蘑菇、芝士配弹牙意粉及忌廉卡邦尼酱。", "protein": ["火腿/烟肉"], "base": ["意面"], "method": ["意面"], "veg": "忌廉酱", "vegetarian": false, "allergens": ["gluten", "wheat", "egg", "milk"]}, {"code": "11018", "line": "my_choice", "cat": "dinner", "name_en": "Fisherman's Pie", "name_zh": "渔夫海鲜派", "desc_en": "Sustainably caught steamed flakes of white fish with tender prawns smothered in a rich creamy white sauce, topped with whipped potato and parmesan cheese then baked golden brown.", "desc_zh": "清蒸白鱼柳及大虾配忌廉白汁，铺薯蓉及帕玛森芝士焗至金黄。", "protein": ["鱼", "海鲜(虾蟹)"], "base": ["薯类"], "method": ["焗"], "veg": "薯蓉面层", "vegetarian": false, "allergens": ["gluten", "crustacean", "fish", "milk"]}, {"code": "11020", "line": "my_choice", "cat": "dinner", "name_en": "Butter Chicken", "name_zh": "印度牛油鸡", "desc_en": "A classic Indian favourite combining tender chicken pieces in an authentic mild creamy sauce served with perfectly cooked rice and topped with toasted almonds.", "desc_zh": "经典印度牛油鸡，微辣忌廉酱嫩鸡块，配米饭撒烤杏仁。", "protein": ["鸡肉"], "base": ["米饭"], "method": ["咖喱"], "veg": "白饭·杏仁", "vegetarian": false, "allergens": ["gluten", "milk", "almond"]}, {"code": "11021", "line": "my_choice", "cat": "dinner", "name_en": "Chicken & Cashews", "name_zh": "腰果鸡丁", "desc_en": "Stir-fried slices of chicken and crisp vegetables, topped with roasted cashews and served with steamed rice.", "desc_zh": "炒鸡片配爽脆蔬菜，撒烤腰果，配蒸饭。", "protein": ["鸡肉"], "base": ["米饭"], "method": ["炒"], "veg": "杂菜·腰果", "vegetarian": false, "allergens": ["mollusc", "cashew", "sesame"]}, {"code": "11022", "line": "my_choice", "cat": "dinner", "name_en": "Honey Soy Chicken", "name_zh": "蜜糖豉油鸡", "desc_en": "Tender chicken pieces in a full flavoured honey soy sauce served with stir fried vegetables and steamed rice.", "desc_zh": "嫩鸡块配浓味蜜糖豉油汁，配炒蔬菜及蒸饭。", "protein": ["鸡肉"], "base": ["米饭"], "method": ["炒"], "veg": "炒蔬菜", "vegetarian": false, "allergens": ["gluten", "wheat", "mollusc", "soy"]}, {"code": "11023", "line": "my_choice", "cat": "dinner", "name_en": "Roast Chicken with Mushroom Sauce", "name_zh": "烤鸡配蘑菇汁", "desc_en": "Tender slices of roasted chicken in creamy mushroom sauce with roasted vegetables, peas, beans and carrots.", "desc_zh": "烤鸡片配忌廉蘑菇汁，配烤蔬菜、青豆、四季豆及红萝卜。", "protein": ["鸡肉"], "base": ["薯类"], "method": ["烤焗"], "veg": "烤蔬菜·青豆·红萝卜", "vegetarian": false, "allergens": ["milk"]}, {"code": "11024", "line": "my_choice", "cat": "dinner", "name_en": "Rosemary & Garlic Chicken with Potato Bake", "name_zh": "迷迭香蒜香鸡配焗薯", "desc_en": "Tender slices of roasted chicken served with a delicious rosemary infused gravy, seasonal vegetables and a creamy potato bake.", "desc_zh": "烤鸡片配迷迭香肉汁、时令蔬菜及忌廉焗薯。", "protein": ["鸡肉"], "base": ["薯类"], "method": ["烤焗"], "veg": "时蔬·忌廉焗薯", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "11025", "line": "my_choice", "cat": "dinner", "name_en": "Apricot Chicken", "name_zh": "杏脯鸡", "desc_en": "Tender slices of chicken in a scrumptious apricot sauce served with creamy baked potatoes, carrots & broccoli.", "desc_zh": "嫩鸡片配香甜杏脯汁，配忌廉焗薯、红萝卜及西兰花。", "protein": ["鸡肉"], "base": ["薯类"], "method": ["炖焖"], "veg": "焗薯·红萝卜·西兰花", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "11027", "line": "my_choice", "cat": "dinner", "name_en": "Sweet & Sour Chicken", "name_zh": "甜酸鸡(咕噜)", "desc_en": "A stir fry of tender marinated chicken pieces and Asian vegetables in a sweet and sour sauce served with rice.", "desc_zh": "腌嫩鸡块炒亚洲蔬菜配甜酸汁，配饭。", "protein": ["鸡肉"], "base": ["米饭"], "method": ["炒"], "veg": "亚洲杂菜", "vegetarian": false, "allergens": ["gluten", "wheat", "mollusc", "soy", "sesame"]}, {"code": "11029", "line": "my_choice", "cat": "dinner", "name_en": "Roast Chicken", "name_zh": "烤鸡", "desc_en": "Oven roasted slices of chicken smothered in a traditional gravy then served with roasted vegetables, peas and carrots.", "desc_zh": "烤鸡片淋传统肉汁，配烤蔬菜、青豆及红萝卜。", "protein": ["鸡肉"], "base": ["薯类"], "method": ["烤焗"], "veg": "烤蔬菜·青豆·红萝卜", "vegetarian": false, "allergens": ["gluten", "wheat", "milk"]}, {"code": "11030", "line": "my_choice", "cat": "dinner", "name_en": "Rissoles with Mash & Gravy", "name_zh": "牛肉饼配薯蓉肉汁", "desc_en": "Chargrilled Aussie beef rissoles topped with our signature gravy served with creamy mashed potato, peas & carrots.", "desc_zh": "炭烤澳洲牛肉饼淋招牌肉汁，配忌廉薯蓉、青豆及红萝卜。", "protein": ["牛肉"], "base": ["薯类"], "method": ["炭烤"], "veg": "薯蓉·青豆·红萝卜", "vegetarian": false, "allergens": ["gluten", "wheat", "milk", "soy"]}, {"code": "11032", "line": "my_choice", "cat": "dinner", "name_en": "Chicken Parmigiana", "name_zh": "帕玛森芝士焗鸡排", "desc_en": "An Aussie favourite combining a tender crumbed chicken breast topped with ham, parmesan cheese and a rich tomato sauce, served with roasted potatoes and vegetables.", "desc_zh": "脆皮鸡胸铺火腿、帕玛森芝士及浓番茄酱，配烤薯仔及蔬菜。", "protein": ["鸡肉", "火腿/烟肉"], "base": ["薯类"], "method": ["裹粉", "焗"], "veg": "烤薯·蔬菜", "vegetarian": false, "allergens": ["gluten", "wheat", "egg", "milk"]}, {"code": "11033", "line": "my_choice", "cat": "dinner", "name_en": "Chicken Schnitzel & Gravy", "name_zh": "炸鸡排配肉汁", "desc_en": "Tender crumbed chicken breast served with our signature gravy, a creamy potato & pea bake and steamed broccoli.", "desc_zh": "脆皮鸡胸配招牌肉汁、忌廉薯仔青豆焗及蒸西兰花。", "protein": ["鸡肉"], "base": ["薯类"], "method": ["裹粉"], "veg": "薯青豆焗·西兰花", "vegetarian": false, "allergens": ["gluten", "wheat", "egg", "milk"]}, {"code": "11034", "line": "my_choice", "cat": "dinner", "name_en": "Spaghetti with Creamy Garlic Prawns", "name_zh": "蒜香忌廉大虾意粉", "desc_en": "Al dente spaghetti with sustainably caught prawns and mixed vegetables, smothered in a creamy garlic sauce.", "desc_zh": "弹牙意粉配可持续捕捞大虾及杂菜，裹蒜香忌廉酱。", "protein": ["海鲜(虾蟹)"], "base": ["意面"], "method": ["意面"], "veg": "杂菜·蒜香忌廉", "vegetarian": false, "allergens": ["gluten", "wheat", "crustacean", "milk"]}, {"code": "11035", "line": "my_choice", "cat": "dinner", "name_en": "Beef Lasagne", "name_zh": "焗牛肉千层面", "desc_en": "Layers of pasta with a roasted vegetable and ground beef bolognaise sauce topped with melted cheese.", "desc_zh": "层层意大利面配烤蔬菜及免治牛肉肉酱，铺融化芝士。", "protein": ["牛肉"], "base": ["意面"], "method": ["焗"], "veg": "芝士面层", "vegetarian": false, "allergens": ["gluten", "wheat", "egg", "milk"]}, {"code": "11036", "line": "my_choice", "cat": "dinner", "name_en": "Hearty Beef Casserole", "name_zh": "丰盛炖牛肉", "desc_en": "Tender beef slow cooked in our signature stock with chunky winter vegetables, green beans and creamy mashed potato.", "desc_zh": "慢煮嫩牛肉配招牌高汤、冬日杂菜、四季豆及忌廉薯蓉。", "protein": ["牛肉"], "base": ["薯类"], "method": ["慢煮", "炖焖"], "veg": "冬日杂菜·薯蓉", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "11037", "line": "my_choice", "cat": "dinner", "name_en": "Roast Turkey with Gravy & Cranberry Sauce", "name_zh": "烤火鸡配红莓酱", "desc_en": "Tender slices of roast turkey in a traditional gravy, topped with cranberry sauce, served with roasted vegetables and a cauliflower & pea gratin.", "desc_zh": "烤火鸡片配传统肉汁及红莓酱，配烤蔬菜及椰菜花青豆焗。", "protein": ["火鸡"], "base": ["薯类"], "method": ["烤焗"], "veg": "烤蔬菜·椰菜花焗", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "11040", "line": "my_choice", "cat": "dinner", "name_en": "Tuna Mornay", "name_zh": "芝士吞拿鱼焗意粉", "desc_en": "Moist flakes of tuna tossed with al dente spiral pasta, peas and corn in a creamy mornay sauce.", "desc_zh": "吞拿鱼配螺旋意粉、青豆及粟米，裹忌廉芝士汁。", "protein": ["鱼"], "base": ["意面"], "method": ["焗", "意面"], "veg": "青豆·粟米", "vegetarian": false, "allergens": ["gluten", "wheat", "fish", "milk"]}, {"code": "11041", "line": "my_choice", "cat": "dinner", "name_en": "Special Fried Rice", "name_zh": "招牌炒饭(叉烧+虾)", "desc_en": "A flavourful mix of Chinese BBQ pork in rice with stir-fried vegetables, egg and prawns seasoned with soy sauce, sesame oil and a hint of pepper.", "desc_zh": "中式叉烧炒饭配炒蔬菜、蛋及虾，以豉油麻油胡椒调味。", "protein": ["猪肉", "海鲜(虾蟹)", "蛋"], "base": ["米饭"], "method": ["炒"], "veg": "炒蔬菜·蛋·虾", "vegetarian": false, "allergens": ["gluten", "wheat", "crustacean", "egg", "mollusc", "soy"]}, {"code": "11042", "line": "my_choice", "cat": "dinner", "name_en": "Chicken in Creamy White Wine Sauce", "name_zh": "白酒忌廉汁鸡", "desc_en": "Tender chicken pieces in a creamy white wine & cream sauce, topped with ham and served with savoury vegetable rice.", "desc_zh": "嫩鸡块配忌廉白酒汁，铺火腿，配香味蔬菜饭。", "protein": ["鸡肉", "火腿/烟肉"], "base": ["米饭"], "method": ["炖焖"], "veg": "蔬菜饭", "vegetarian": false, "allergens": ["milk"]}, {"code": "11043", "line": "my_choice", "cat": "dinner", "name_en": "Creamy Chicken Boscaiola Pasta", "name_zh": "忌廉鸡肉烟肉意粉", "desc_en": "An Italian classic combining chicken, bacon, mushrooms, and al dente spiral pasta with a delicious creamy white wine & parmesan sauce.", "desc_zh": "经典意式：鸡肉、烟肉、蘑菇配螺旋意粉，裹忌廉白酒帕玛森酱。", "protein": ["鸡肉", "火腿/烟肉"], "base": ["意面"], "method": ["意面"], "veg": "忌廉酱", "vegetarian": false, "allergens": ["gluten", "wheat", "milk"]}, {"code": "11044", "line": "my_choice", "cat": "dinner", "name_en": "Irish Stew with Mash", "name_zh": "爱尔兰炖羊肉配薯蓉", "desc_en": "Tender slow cooked lamb, simmered in our signature gravy with vegetables and served with creamy mashed potato.", "desc_zh": "慢煮嫩羊肉配招牌肉汁及杂菜，配忌廉薯蓉。", "protein": ["羊肉"], "base": ["薯类"], "method": ["慢煮", "炖焖"], "veg": "杂菜·薯蓉", "vegetarian": false, "allergens": ["gluten", "fish", "milk"]}, {"code": "21000", "line": "my_choice", "cat": "soup", "name_en": "Creamy Tomato Soup", "name_zh": "忌廉番茄汤", "desc_en": "A deliciously rich and creamy tomato soup made from vine ripened tomatoes.", "desc_zh": "浓郁忌廉番茄汤，以熟透番茄制成。", "protein": ["素"], "base": ["无"], "method": ["汤"], "veg": "—", "vegetarian": true, "allergens": ["gluten", "milk"]}, {"code": "21001", "line": "my_choice", "cat": "soup", "name_en": "Pumpkin Soup", "name_zh": "南瓜汤", "desc_en": "A traditional rich and creamy soup made from locally sourced sweet pumpkin.", "desc_zh": "传统浓忌廉南瓜汤，本地甜南瓜制。", "protein": ["素"], "base": ["无"], "method": ["汤"], "veg": "—", "vegetarian": true, "allergens": ["gluten", "milk"]}, {"code": "21002", "line": "my_choice", "cat": "soup", "name_en": "Chicken Noodle Soup", "name_zh": "鸡肉面汤", "desc_en": "A hearty broth combining chicken with fresh country vegetables and pasta noodles.", "desc_zh": "鸡肉配田园蔬菜及面条的丰盛清汤。", "protein": ["鸡肉"], "base": ["意面"], "method": ["汤"], "veg": "田园蔬菜·面条", "vegetarian": false, "allergens": ["gluten", "wheat", "milk"]}, {"code": "21003", "line": "my_choice", "cat": "soup", "name_en": "Pea & Ham Soup", "name_zh": "青豆火腿汤", "desc_en": "Split peas, ham, celery, carrot and onion simmered slowly into a deliciously thick soup.", "desc_zh": "去皮青豆、火腿、芹菜、红萝卜及洋葱慢煮成的浓汤。", "protein": ["火腿/烟肉"], "base": ["无"], "method": ["汤"], "veg": "青豆·根菜", "vegetarian": false, "allergens": ["milk"]}, {"code": "21004", "line": "my_choice", "cat": "soup", "name_en": "Potato & Leek Soup", "name_zh": "薯仔韭葱汤", "desc_en": "A French classic combining creamy seasoned, pureed potato and sautéed leeks.", "desc_zh": "法式经典：忌廉薯蓉配炒韭葱。", "protein": ["素"], "base": ["薯类"], "method": ["汤"], "veg": "韭葱", "vegetarian": true, "allergens": ["milk"]}, {"code": "21005", "line": "my_choice", "cat": "soup", "name_en": "Chicken & Sweet Corn Soup", "name_zh": "鸡肉粟米汤", "desc_en": "Roasted chicken pieces in a thick and creamy sweet corn soup.", "desc_zh": "烤鸡块配浓忌廉甜粟米汤。", "protein": ["鸡肉"], "base": ["无"], "method": ["汤"], "veg": "粟米", "vegetarian": false, "allergens": ["milk"]}, {"code": "21006", "line": "my_choice", "cat": "soup", "name_en": "Beef & Barley Soup", "name_zh": "牛肉大麦汤", "desc_en": "Ground prime beef combined with garden vegetables and barley, then slow cooked in a delicious beef broth.", "desc_zh": "免治优质牛肉配田园蔬菜及大麦，以牛肉清汤慢煮。", "protein": ["牛肉"], "base": ["无"], "method": ["汤"], "veg": "蔬菜·大麦", "vegetarian": false, "allergens": ["gluten", "milk"]}, {"code": "21007", "line": "my_choice", "cat": "soup", "name_en": "Seafood Chowder", "name_zh": "海鲜忌廉汤", "desc_en": "A traditional rich and creamy chowder with sustainably caught flakes of white fish and minced prawns.", "desc_zh": "传统浓忌廉杂烩，配可持续捕捞白鱼柳及虾。", "protein": ["鱼", "海鲜(虾蟹)"], "base": ["无"], "method": ["汤"], "veg": "白鱼·虾", "vegetarian": false, "allergens": ["crustacean", "fish", "milk"]}, {"code": "21008", "line": "my_choice", "cat": "soup", "name_en": "Creamy Chicken & Mushroom Soup", "name_zh": "忌廉鸡肉蘑菇汤", "desc_en": "Roasted chicken pieces, simmered in a creamy chicken & mushroom soup.", "desc_zh": "烤鸡块以忌廉鸡肉蘑菇汤慢煮。", "protein": ["鸡肉"], "base": ["无"], "method": ["汤"], "veg": "蘑菇", "vegetarian": false, "allergens": ["milk"]}, {"code": "22000", "line": "my_choice", "cat": "dessert", "name_en": "Vanilla Custard", "name_zh": "香草吉士", "desc_en": "Rich, creamy and decadent vanilla custard.", "desc_zh": "浓郁香草吉士(蛋奶冻)。", "protein": ["素"], "base": ["无"], "method": ["甜品"], "veg": "—", "vegetarian": true, "allergens": ["milk"]}, {"code": "22001", "line": "my_choice", "cat": "dessert", "name_en": "Rice Pudding", "name_zh": "米布甸", "desc_en": "Deliciously creamy vanilla rice pudding with a dusting of cinnamon.", "desc_zh": "忌廉香草米布甸，撒肉桂粉。", "protein": ["素"], "base": ["米饭"], "method": ["甜品"], "veg": "—", "vegetarian": true, "allergens": ["milk"]}, {"code": "22002", "line": "my_choice", "cat": "dessert", "name_en": "Apricot Pudding", "name_zh": "杏脯布甸", "desc_en": "Golden, sweetly stewed apricot compote with creamy vanilla custard and a light sponge top.", "desc_zh": "金黄炖杏脯配忌廉香草吉士及轻盈海绵层。", "protein": ["素"], "base": ["无"], "method": ["甜品"], "veg": "—", "vegetarian": true, "allergens": ["gluten", "wheat", "egg", "milk", "soy"]}, {"code": "22003", "line": "my_choice", "cat": "dessert", "name_en": "Sticky Date Pudding with Custard", "name_zh": "焦糖红枣布甸配吉士", "desc_en": "A sticky caramel dipped sponge topper with dates and creamy vanilla custard.", "desc_zh": "焦糖红枣海绵布甸配忌廉香草吉士。", "protein": ["素"], "base": ["无"], "method": ["甜品"], "veg": "—", "vegetarian": true, "allergens": ["gluten", "wheat", "egg", "milk", "soy"]}, {"code": "22004", "line": "my_choice", "cat": "dessert", "name_en": "Lemon Sponge with Custard", "name_zh": "柠檬海绵蛋糕配吉士", "desc_en": "A sweet and tangy lemon sponge cake, served with creamy vanilla custard.", "desc_zh": "酸甜柠檬海绵蛋糕配忌廉香草吉士。", "protein": ["素"], "base": ["无"], "method": ["甜品"], "veg": "—", "vegetarian": true, "allergens": ["gluten", "wheat", "egg", "milk", "soy"]}, {"code": "22005", "line": "my_choice", "cat": "dessert", "name_en": "Apple & Cinnamon Crumble", "name_zh": "苹果肉桂酥", "desc_en": "Sweetly stewed cinnamon apples, sultanas and creamy vanilla custard, topped with our delicious butter crumble.", "desc_zh": "炖肉桂苹果、提子干及忌廉香草吉士，铺牛油酥粒。", "protein": ["素"], "base": ["无"], "method": ["甜品"], "veg": "—", "vegetarian": true, "allergens": ["gluten", "wheat", "milk"]}, {"code": "22006", "line": "my_choice", "cat": "dessert", "name_en": "Rice Pudding with Blueberry & Apple Compote", "name_zh": "蓝莓苹果米布甸", "desc_en": "A sweet compote of blueberries & apples topped with a creamy vanilla rice pudding.", "desc_zh": "蓝莓苹果果茸配忌廉香草米布甸。", "protein": ["素"], "base": ["米饭"], "method": ["甜品"], "veg": "—", "vegetarian": true, "allergens": ["milk"]}, {"code": "22007", "line": "my_choice", "cat": "dessert", "name_en": "Bread & Butter Pudding", "name_zh": "牛油面包布甸", "desc_en": "Lightly toasted bread pieces and sultanas, smothered in a rich buttery custard and topped with a sprinkle of cinnamon.", "desc_zh": "烤面包块及提子干裹牛油吉士，撒肉桂。", "protein": ["素"], "base": ["面包"], "method": ["甜品"], "veg": "—", "vegetarian": true, "allergens": ["gluten", "wheat", "milk"]}, {"code": "22008", "line": "my_choice", "cat": "dessert", "name_en": "Cherry & Raspberry Crumble", "name_zh": "车厘子红桑子酥", "desc_en": "A sweet compote of cherries & raspberries with a creamy vanilla custard, topped with our delicious butter crumble.", "desc_zh": "车厘子及红桑子果茸配忌廉香草吉士，铺牛油酥粒。", "protein": ["素"], "base": ["无"], "method": ["甜品"], "veg": "—", "vegetarian": true, "allergens": ["gluten", "wheat", "milk"]}, {"code": "22009", "line": "my_choice", "cat": "dessert", "name_en": "Strawberry Cheesecake Crumble", "name_zh": "草莓芝士饼酥", "desc_en": "A sweet strawberry syrup with a decadent cream cheese filling, topped with our delicious butter crumble.", "desc_zh": "草莓糖浆配浓忌廉芝士馅，铺牛油酥粒。", "protein": ["素"], "base": ["无"], "method": ["甜品"], "veg": "—", "vegetarian": true, "allergens": ["gluten", "wheat", "egg", "milk", "soy"]}, {"code": "22010", "line": "my_choice", "cat": "dessert", "name_en": "Tropical Cheesecake Crumble", "name_zh": "热带水果芝士饼酥", "desc_en": "A sweet mango, passionfruit & pineapple compote with a decadent cream cheese filling, topped with our delicious butter crumble.", "desc_zh": "芒果、百香果及菠萝果茸配忌廉芝士馅，铺牛油酥粒。", "protein": ["素"], "base": ["无"], "method": ["甜品"], "veg": "—", "vegetarian": true, "allergens": ["gluten", "wheat", "egg", "milk", "soy"]}, {"code": "22011", "line": "my_choice", "cat": "dessert", "name_en": "Blueberry Cheesecake Crumble", "name_zh": "蓝莓芝士饼酥", "desc_en": "A sweet blueberry compote with a decadent cream cheese filling, topped with our delicious butter crumble.", "desc_zh": "蓝莓果茸配浓忌廉芝士馅，铺牛油酥粒。", "protein": ["素"], "base": ["无"], "method": ["甜品"], "veg": "—", "vegetarian": true, "allergens": ["gluten", "wheat", "egg", "milk", "soy"]}]};
+const items=MENU.items;
+const byCode=Object.fromEntries(items.map(i=>[i.code,i]));
+const ALG_EN={gluten:"Gluten",wheat:"Wheat",milk:"Milk",soy:"Soy",egg:"Egg",fish:"Fish",crustacean:"Crustacean",mollusc:"Mollusc",sesame:"Sesame",almond:"Almond",cashew:"Cashew",peanut:"Peanut",pine_nut:"Pine Nut"};
+const ALG_ZH={gluten:"麸质",wheat:"小麦",milk:"奶",soy:"大豆",egg:"蛋",fish:"鱼",crustacean:"甲壳",mollusc:"贝类",sesame:"芝麻",almond:"杏仁",cashew:"腰果",peanut:"花生",pine_nut:"松子"};
+const PROT_EN={"牛肉":"Beef","鸡肉":"Chicken","猪肉":"Pork","羊肉":"Lamb","鱼":"Fish","海鲜(虾蟹)":"Seafood","火鸡":"Turkey","豆腐/素":"Tofu","素":"Veg","火腿/烟肉":"Ham","蛋":"Egg"};
+const METH_EN={"烤焗":"Roast","慢煮":"Slow-cooked","炖焖":"Braised","香煎":"Pan-fried","炭烤":"Chargrilled","炒":"Stir-fried","焗":"Baked","裹粉":"Crumbed","咖喱":"Curry","意面":"Pasta","清蒸":"Steamed","汤":"Soup","甜品":"Dessert"};
+const BASE_EN={"意面":"Pasta","米饭":"Rice","薯类":"Potato","面包":"Bread"};
+const CAT_EN={dinner:"Dinner",soup:"Soup",dessert:"Dessert"},CAT_ZH={dinner:"晚餐",soup:"汤",dessert:"甜品"};
+const LINE_EN={my_choice:"My Choice",standard:"Standard"},LINE_ZH={my_choice:"自选",standard:"标准"};
+const methodOrder=["烤焗","慢煮","炖焖","香煎","炭烤","炒","焗","裹粉","咖喱","意面","清蒸"];
+const SLOT={main:{en:"Main",zh:"主菜",ico:"🍽",list:items.filter(i=>i.cat==="dinner")},
+  soup:{en:"Soup",zh:"汤",ico:"🍲",list:items.filter(i=>i.cat==="soup")},
+  dessert:{en:"Dessert",zh:"甜品",ico:"🍰",list:items.filter(i=>i.cat==="dessert")}};
+const SLOT_ORDER=["main","soup","dessert"];
+function algEN(it){return it.allergens.length?"Contains: "+it.allergens.map(a=>ALG_EN[a]).join(", "):"No major allergens";}
+
+/* ===== USER DATA (versioned, extensible) ===== */
+function blankDB(){return {schema:"lne-meal-hub",version:1,profile:{},contract:{},prefs:{},deliveries:[],consumption:[],adjust:{}};}
+let db=blankDB(),dirty=false,loadedName="";
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function todayISO(){return new Date().toISOString().slice(0,10);}
+function setDirty(){dirty=true;updateStatus();}
+function normalize(o){
+  const d=blankDB();
+  if(o&&typeof o==="object"){
+    for(const k in o){if(!(k in d))d[k]=o[k];}            // preserve unknown/future keys
+    Object.assign(d.profile,o.profile||{});
+    Object.assign(d.contract,o.contract||{});
+    Object.assign(d.prefs,o.prefs||{});
+    Object.assign(d.adjust,o.adjust||{});
+    if(Array.isArray(o.deliveries))d.deliveries=o.deliveries.map(x=>({id:x.id||uid(),date:x.date||"",items:(x.items||[]).map(it=>({code:String(it.code),qty:+it.qty||1})),note:x.note||""}));
+    if(Array.isArray(o.consumption))d.consumption=o.consumption.map(x=>({id:x.id||uid(),date:x.date||"",code:String(x.code),qty:+x.qty||1}));
+  }
+  return d;
+}
+function updateStatus(){
+  const dot=document.getElementById("savedot");
+  if(dirty){dot.className="savedot unsaved";dot.innerHTML='<span class="d">●</span> Unsaved 未保存';}
+  else{dot.className="savedot";dot.innerHTML=loadedName?'<span class="d">●</span> Saved 已保存':'<span class="d">○</span> No file 未导入';}
+  const txt=loadedName?`Loaded 已导入: ${loadedName}`+(dirty?" · 有未保存改动":" · 已是最新"):"No file loaded yet. 尚未导入数据。";
+  const a=document.getElementById("dataStat"),b=document.getElementById("dataStat2");
+  if(a)a.textContent=txt;if(b)b.textContent=txt;
+}
+function doExport(){
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="送餐管理数据.json";
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);
+  dirty=false;if(!loadedName)loadedName="送餐管理数据.json";updateStatus();
+}
+function doImport(){document.getElementById("fileIn").click();}
+document.getElementById("fileIn").onchange=e=>{
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{db=normalize(JSON.parse(r.result));loadedName=f.name;dirty=false;renderAll();closeData();}
+    catch(err){alert("Couldn't read that file. 无法读取，请确认是本工具导出的 JSON。");}};
+  r.readAsText(f);e.target.value="";
+};
+["btnExport","btnExport2"].forEach(id=>document.getElementById(id).onclick=doExport);
+["btnImport","btnImport2"].forEach(id=>document.getElementById(id).onclick=doImport);
+window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
+
+/* data sheet */
+const dataSheet=document.getElementById("dataSheet"),dataScrim=document.getElementById("dataScrim");
+function openData(){dataScrim.classList.add("open");dataSheet.classList.add("open");}
+function closeData(){dataScrim.classList.remove("open");dataSheet.classList.remove("open");}
+document.getElementById("dataBtn").onclick=openData;
+document.getElementById("dataClose").onclick=closeData;dataScrim.onclick=closeData;
+
+/* ===== nav ===== */
+document.getElementById("nav").addEventListener("click",e=>{
+  const b=e.target.closest(".navbtn");if(!b)return;
+  document.querySelectorAll(".navbtn").forEach(x=>x.classList.toggle("on",x===b));
+  const p=b.dataset.p;
+  document.querySelectorAll(".panel").forEach(x=>x.classList.toggle("on",x.id==="p-"+p));
+  if(p==="stock")renderStock();
+  window.scrollTo(0,0);
+});
+
+/* ===== stock map (shared) ===== */
+function computeStock(){const m={};
+  db.deliveries.forEach(d=>d.items.forEach(it=>{m[it.code]=(m[it.code]||0)+(+it.qty||0);}));
+  db.consumption.forEach(c=>{m[c.code]=(m[c.code]||0)-(+c.qty||0);});
+  Object.entries(db.adjust).forEach(([c,v])=>{m[c]=(m[c]||0)+(+v||0);});
+  return m;}
+
+/* ===== ORDER ===== */
+let sets=[blankSet(),blankSet()];
+function blankSet(){return {main:null,soup:null,dessert:null}}
+const setCount=s=>SLOT_ORDER.filter(k=>s[k]).length;
+const setComplete=s=>SLOT_ORDER.every(k=>s[k]);
+function slotRow(si,key){
+  const meta=SLOT[key],code=sets[si][key],it=code?byCode[code]:null;
+  const div=document.createElement("div");div.className="slot"+(it?" filled":"");
+  if(it){const std=it.line==="standard";
+    div.innerHTML=`<div class="ico">${meta.ico}</div><div class="body">
+      <div class="stype">${meta.en}<span class="z zh">${meta.zh}</span></div>
+      <div class="dish"><span class="c ${std?'std':''} mono">${it.code}</span><span class="nm">${it.name_en}</span></div>
+      <div class="nmz zh">${it.name_zh}</div><div class="dalg">${algEN(it)}</div></div>
+      <div class="act"><span class="chg">Change</span><button class="clr">×</button></div>`;
+    div.querySelector(".chg").onclick=ev=>{ev.stopPropagation();openPicker(si,key);};
+    div.querySelector(".clr").onclick=ev=>{ev.stopPropagation();sets[si][key]=null;renderBuilder();};
+  }else{
+    div.innerHTML=`<div class="ico">${meta.ico}</div><div class="body"><div class="stype">${meta.en}<span class="z zh">${meta.zh}</span></div>
+      <div class="empty2">＋ Add ${meta.en}<span class="z zh">选${meta.zh}</span></div></div><div class="go">›</div>`;
+    div.onclick=()=>openPicker(si,key);
+  }
+  return div;
+}
+function renderBuilder(){
+  const B=document.getElementById("builder");B.innerHTML="";
+  sets.forEach((s,si)=>{
+    const card=document.createElement("div");card.className="setcard";
+    const cnt=setCount(s),done=setComplete(s);
+    const status=done?`<span class="done">✓ Complete</span>`:cnt?`<span class="partial">${cnt}/3</span>`:"";
+    const rm=sets.length>1?`<button class="rm">Remove</button>`:"";
+    const h=document.createElement("div");h.className="set-h";
+    h.innerHTML=`<span class="badge">Set ${si+1}</span>${status}${rm}`;
+    if(sets.length>1)h.querySelector(".rm").onclick=()=>{sets.splice(si,1);renderBuilder();};
+    card.appendChild(h);SLOT_ORDER.forEach(k=>card.appendChild(slotRow(si,k)));B.appendChild(card);
+  });
+  document.getElementById("addset").style.display=sets.length<3?"block":"none";
+  document.getElementById("ostat").innerHTML=`<b>${sets.filter(setComplete).length}</b> complete · ${sets.length} sets`;
+  document.getElementById("printOrder").disabled=!sets.some(s=>setCount(s)>0);
+}
+document.getElementById("addset").onclick=()=>{if(sets.length<3){sets.push(blankSet());renderBuilder();}};
+document.getElementById("clearOrder").onclick=()=>{if(sets.some(s=>setCount(s))&&!confirm("Clear order? 清空点餐？"))return;sets=[blankSet(),blankSet()];document.getElementById("wk").value="";renderBuilder();};
+
+/* picker with prefs + stock integration */
+const sheet=document.getElementById("sheet"),scrim=document.getElementById("scrim");
+let pk=null;
+function openPicker(si,key){
+  pk={si,key,q:"",protein:new Set(),method:new Set(),veg:false,exAlg:new Set(),fopen:false,showAvoid:false};
+  document.getElementById("sheetTitle").innerHTML=`Choose ${SLOT[key].en} <span class="zh" style="font-size:12.5px;color:var(--muted)">选${SLOT[key].zh} · 套餐 ${si+1}</span>`;
+  document.getElementById("psearch").value="";
+  buildPickerFilters();
+  document.getElementById("pfilters").classList.add("collapsed");document.getElementById("pfchev").textContent="▾";
+  const fc=document.getElementById("pfcount");fc.textContent="0";fc.classList.add("zero");
+  renderPicker();scrim.classList.add("open");sheet.classList.add("open");document.getElementById("plist").scrollTop=0;
+}
+function closePicker(){sheet.classList.remove("open");scrim.classList.remove("open");pk=null;}
+scrim.onclick=closePicker;document.getElementById("sheetClose").onclick=closePicker;
+function chip(en,zh,onclick,cls){const c=document.createElement("span");c.className="chip "+(cls||"");c.innerHTML=`${en}<span class="z zh">${zh}</span>`;c.onclick=()=>onclick(c);return c;}
+function buildPickerFilters(){
+  const F=document.getElementById("pfilters");F.innerHTML="";const base=SLOT[pk.key].list,uniq=a=>[...new Set(a)];
+  if(pk.key==="main"){
+    const proteins=uniq(base.flatMap(i=>i.protein)).filter(p=>p!=="素");
+    const pr=document.createElement("div");pr.className="frow";pr.innerHTML=`<span class="fl">Protein 主蛋白</span>`;
+    proteins.forEach(p=>pr.appendChild(chip(PROT_EN[p]||p,p,c=>{pk.protein.has(p)?pk.protein.delete(p):pk.protein.add(p);c.classList.toggle("on");afterFilter();})));F.appendChild(pr);
+    const methods=uniq(base.flatMap(i=>i.method)).sort((a,b)=>methodOrder.indexOf(a)-methodOrder.indexOf(b));
+    const mr=document.createElement("div");mr.className="frow";mr.innerHTML=`<span class="fl">Cooking 烹调</span>`;
+    methods.forEach(m=>mr.appendChild(chip(METH_EN[m]||m,m,c=>{pk.method.has(m)?pk.method.delete(m):pk.method.add(m);c.classList.toggle("on");afterFilter();})));F.appendChild(mr);
+  }
+  const vr=document.createElement("div");vr.className="frow";vr.innerHTML=`<span class="fl">Diet 膳食</span>`;
+  vr.appendChild(chip("Veg only","仅素食",c=>{pk.veg=!pk.veg;c.classList.toggle("on");afterFilter();},"veg"));F.appendChild(vr);
+  const algs=uniq(base.flatMap(i=>i.allergens)).sort();
+  if(algs.length){const ar=document.createElement("div");ar.className="frow";ar.innerHTML=`<span class="fl">Exclude 排除</span>`;
+    algs.forEach(a=>ar.appendChild(chip("No "+ALG_EN[a],"无"+ALG_ZH[a],c=>{pk.exAlg.has(a)?pk.exAlg.delete(a):pk.exAlg.add(a);c.classList.toggle("on");afterFilter();},"alg")));F.appendChild(ar);}
+}
+function pkActive(){return pk.protein.size+pk.method.size+pk.exAlg.size+(pk.veg?1:0)+(pk.q?1:0);}
+function afterFilter(){const n=pkActive(),fc=document.getElementById("pfcount");fc.textContent=n;fc.classList.toggle("zero",n===0);renderPicker();}
+document.getElementById("pftoggle").onclick=()=>{pk.fopen=!pk.fopen;document.getElementById("pfilters").classList.toggle("collapsed",!pk.fopen);document.getElementById("pfchev").textContent=pk.fopen?"▴":"▾";};
+document.getElementById("psearch").oninput=e=>{pk.q=e.target.value.trim().toLowerCase();afterFilter();};
+function pMatch(it){
+  if(pk.q){const h=(it.code+" "+it.name_en+" "+it.name_zh+" "+it.desc_en).toLowerCase();if(!h.includes(pk.q))return false;}
+  if(pk.protein.size&&!it.protein.some(p=>pk.protein.has(p)))return false;
+  if(pk.method.size&&!it.method.some(m=>pk.method.has(m)))return false;
+  if(pk.veg&&!it.vegetarian)return false;
+  if(pk.exAlg.size&&it.allergens.some(a=>pk.exAlg.has(a)))return false;
+  return true;
+}
+function renderPicker(){
+  const L=document.getElementById("plist");L.innerHTML="";
+  const cur=sets[pk.si][pk.key];const stock=computeStock();
+  let list=SLOT[pk.key].list.filter(pMatch);
+  const avoided=list.filter(i=>db.prefs[i.code]==="reject").length;
+  if(!pk.showAvoid)list=list.filter(i=>db.prefs[i.code]!=="reject");
+  const rank=i=>db.prefs[i.code]==="want"?0:1;
+  list.sort((a,b)=>{const r=rank(a)-rank(b);if(r)return r;
+    const sa=(stock[a.code]||0)>0?0:1,sb=(stock[b.code]||0)>0?0:1;return sa-sb;});
+  const cnt=document.createElement("div");cnt.className="pcount";
+  cnt.innerHTML=`<span>${list.length} ${SLOT[pk.key].en.toLowerCase()} option(s)</span>`+
+    (avoided?`<span class="toggleav">${pk.showAvoid?'Hide':'Show'} avoided 隐藏/显示拒绝 (${avoided})</span>`:"");
+  L.appendChild(cnt);
+  if(avoided){cnt.querySelector(".toggleav").onclick=()=>{pk.showAvoid=!pk.showAvoid;renderPicker();};}
+  if(!list.length){L.insertAdjacentHTML("beforeend",'<div class="empty">No matches 没有符合的</div>');return;}
+  list.forEach(it=>{
+    const std=it.line==="standard",pref=db.prefs[it.code],stk=stock[it.code]||0;
+    const row=document.createElement("div");row.className="prow"+(it.code===cur?" cur":"")+(pref==="reject"?" avoid":"");
+    const marks=[];
+    if(pref==="want")marks.push('<span class="mk want">♥ Want</span>');
+    if(pref==="reject")marks.push('<span class="mk alg">✕ Avoid</span>');
+    if(stk>0)marks.push(`<span class="mk stk">In fridge ×${stk}</span>`);
+    if(it.vegetarian)marks.push('<span class="mk veg">Veg</span>');
+    const alg=it.allergens.length?`<span class="mk alg">${it.allergens.map(a=>ALG_EN[a]).join(", ")}</span>`:'';
+    row.innerHTML=`<span class="c ${std?'std':''} mono">${it.code}</span><div class="b">
+      <div class="en">${it.name_en}</div><div class="zhn zh">${it.name_zh}</div>
+      <div class="dsc">${it.desc_en}</div>
+      <div class="meta">${marks.join("")}${alg}</div></div>
+      <span class="pick">${it.code===cur?'✓':'＋'}</span>`;
+    row.onclick=()=>{sets[pk.si][pk.key]=it.code;closePicker();renderBuilder();};
+    L.appendChild(row);
+  });
+}
+function printOrder(){
+  const wk=document.getElementById("wk").value.trim(),now=new Date().toLocaleString("en-AU");
+  let body=`<div class="p-h"><h1>Weekly Meal Order</h1><div class="meta">Lite n' Easy My Choice CHSP ${wk?'· Delivery: '+wk:''} · Printed ${now}</div></div>`;
+  let any=false;
+  sets.forEach((s,si)=>{if(!setCount(s))return;any=true;
+    body+=`<div class="p-set"><h3>Set ${si+1}</h3><table><thead><tr><th style="width:70px">Course</th><th class="p-code" style="width:66px">Code</th><th>Dish</th><th style="width:160px">Allergens</th></tr></thead><tbody>`;
+    SLOT_ORDER.forEach(k=>{const code=s[k],it=code?byCode[code]:null;
+      body+=`<tr><td>${SLOT[k].en}</td><td class="p-code">${it?it.code:'—'}</td><td>${it?it.name_en:'(not selected)'}</td><td>${it?(it.allergens.map(a=>ALG_EN[a]).join(", ")||'—'):''}</td></tr>`;});
+    body+=`</tbody></table></div>`;});
+  if(!any){alert("Nothing selected. 还没有选菜。");return;}
+  const codes=[];sets.forEach(s=>SLOT_ORDER.forEach(k=>{if(s[k])codes.push(s[k]);}));
+  body+=`<p class="p-foot"><b>Codes:</b> ${codes.join("  ")}<br>Code is the order key. Confirm allergens on the product label before ordering.</p>`;
+  document.getElementById("printArea").innerHTML=body;window.print();
+}
+document.getElementById("printOrder").onclick=printOrder;
+
+/* ===== MENU browse (+pref toggle +stock badge) ===== */
+const mState={q:"",cat:new Set(),line:new Set(),protein:new Set(),method:new Set(),base:new Set(),veg:false,exAlg:new Set()};
+const uniq=a=>[...new Set(a)];
+const mProteins=uniq(items.flatMap(i=>i.protein)).filter(p=>p!=="素");
+const mMethods=uniq(items.flatMap(i=>i.method)).sort((a,b)=>methodOrder.indexOf(a)-methodOrder.indexOf(b));
+const mBases=uniq(items.flatMap(i=>i.base)).filter(b=>b!=="无");
+const mAlgs=uniq(items.flatMap(i=>i.allergens)).sort();
+const MF=document.getElementById("mFacets");
+function mFacetRow(en,zh,opts,key,enmap,zhmap,extra){
+  const row=document.createElement("div");row.className="frow";row.innerHTML=`<span class="fl">${en} ${zh}</span>`;
+  opts.forEach(o=>row.appendChild(chip(enmap?(enmap[o]||o):o,zhmap?(zhmap[o]||""):(enmap?o:""),c=>{mState[key].has(o)?mState[key].delete(o):mState[key].add(o);c.classList.toggle("on");renderMenu();},extra)));
+  MF.appendChild(row);
+}
+mFacetRow("Category","分类",["dinner","soup","dessert"],"cat",CAT_EN,CAT_ZH);
+mFacetRow("Line","系列",["my_choice","standard"],"line",LINE_EN,LINE_ZH);
+mFacetRow("Protein","主蛋白",mProteins,"protein",PROT_EN,null);
+mFacetRow("Cooking","烹调",mMethods,"method",METH_EN,null);
+mFacetRow("Base","主食",mBases,"base",BASE_EN,null);
+{const vr=document.createElement("div");vr.className="frow";vr.innerHTML=`<span class="fl">Diet 膳食</span>`;
+ vr.appendChild(chip("Veg only","仅素食",c=>{mState.veg=!mState.veg;c.classList.toggle("on");renderMenu();},"veg"));MF.appendChild(vr);}
+{const ar=document.createElement("div");ar.className="frow";ar.innerHTML=`<span class="fl">Exclude 排除</span>`;
+ mAlgs.forEach(a=>ar.appendChild(chip("No "+ALG_EN[a],"无"+ALG_ZH[a],c=>{mState.exAlg.has(a)?mState.exAlg.delete(a):mState.exAlg.add(a);c.classList.toggle("on");renderMenu();},"alg")));MF.appendChild(ar);}
+let mFopen=false;
+document.getElementById("mToggleF").onclick=()=>{mFopen=!mFopen;document.getElementById("mFacets").classList.toggle("collapsed",!mFopen);document.getElementById("mChev").textContent=mFopen?"▴":"▾";};
+document.getElementById("mq").oninput=e=>{mState.q=e.target.value.trim().toLowerCase();renderMenu();};
+document.getElementById("mClr").onclick=()=>{mState.q="";document.getElementById("mq").value="";["cat","line","protein","method","base","exAlg"].forEach(k=>mState[k].clear());mState.veg=false;document.querySelectorAll("#mFacets .chip.on").forEach(c=>c.classList.remove("on"));renderMenu();};
+function mMatch(it){
+  if(mState.q){const h=(it.code+" "+it.name_en+" "+it.name_zh+" "+it.desc_en).toLowerCase();if(!h.includes(mState.q))return false;}
+  if(mState.cat.size&&!mState.cat.has(it.cat))return false;
+  if(mState.line.size&&!mState.line.has(it.line))return false;
+  if(mState.protein.size&&!it.protein.some(p=>mState.protein.has(p)))return false;
+  if(mState.method.size&&!it.method.some(m=>mState.method.has(m)))return false;
+  if(mState.base.size&&!it.base.some(b=>mState.base.has(b)))return false;
+  if(mState.veg&&!it.vegetarian)return false;
+  if(mState.exAlg.size&&it.allergens.some(a=>mState.exAlg.has(a)))return false;
+  return true;
+}
+function mCard(it,stock){
+  const std=it.line==="standard",pref=db.prefs[it.code]||"neutral",stk=stock[it.code]||0;
+  const d=document.createElement("div");d.className="mcard";
+  const alg=it.allergens.length?`<p class="alg">Contains: ${it.allergens.map(a=>ALG_EN[a]).join(", ")}</p>`:`<p class="alg none">No major allergens</p>`;
+  d.innerHTML=`<div class="crow"><span class="code ${std?'std':''} mono">${it.code}</span><span class="ltag">${LINE_EN[it.line]} · ${CAT_EN[it.cat]}${it.vegetarian?' · Veg':''}</span>${stk>0?`<span class="stk">In fridge ×${stk}</span>`:''}</div>
+    <div class="en">${it.name_en}</div><div class="zhn zh">${it.name_zh}</div>
+    <p class="dsc">${it.desc_en}</p><p class="dscz zh">${it.desc_zh}</p>${alg}
+    <div class="seg">
+      <button class="want ${pref==='want'?'on':''}" data-v="want">♥ Want</button>
+      <button class="neu ${pref==='neutral'?'on':''}" data-v="neutral">– Neutral</button>
+      <button class="rej ${pref==='reject'?'on':''}" data-v="reject">✕ Avoid</button></div>`;
+  d.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{const v=b.dataset.v;if(v==="neutral")delete db.prefs[it.code];else db.prefs[it.code]=v;setDirty();renderMenu();});
+  return d;
+}
+function renderMenu(){
+  const wrapEl=document.getElementById("menuList");wrapEl.innerHTML="";
+  const n=mState.cat.size+mState.line.size+mState.protein.size+mState.method.size+mState.base.size+mState.exAlg.size+(mState.veg?1:0)+(mState.q?1:0);
+  const fc=document.getElementById("mfc");fc.textContent=n;fc.classList.toggle("zero",n===0);
+  const list=items.filter(mMatch),stock=computeStock();
+  document.getElementById("mrc").textContent=`Showing ${list.length} / ${items.length}`;
+  if(!list.length){wrapEl.innerHTML='<div class="empty">No matches 没有符合的菜</div>';return;}
+  [["my_choice","dinner"],["my_choice","soup"],["my_choice","dessert"],["standard","dinner"]].forEach(([ln,ct])=>{
+    const sub=list.filter(i=>i.line===ln&&i.cat===ct);if(!sub.length)return;
+    const h=document.createElement("div");h.className="section-h";h.innerHTML=`<h4>${LINE_EN[ln]} · ${CAT_EN[ct]}</h4><span class="n">${sub.length}</span>`;wrapEl.appendChild(h);
+    const g=document.createElement("div");g.className="grid";sub.forEach(it=>g.appendChild(mCard(it,stock)));wrapEl.appendChild(g);
+  });
+}
+
+/* ===== code datalist / resolve ===== */
+function resolveCode(raw){raw=(raw||"").trim();if(!raw)return null;if(byCode[raw])return raw;
+  const low=raw.toLowerCase();const hit=items.find(i=>i.code===raw||i.name_en.toLowerCase()===low||i.name_zh===raw);return hit?hit.code:null;}
+document.getElementById("codeList").innerHTML=items.map(i=>`<option value="${i.code}">${i.code} — ${i.name_en}</option>`).join("");
+
+/* ===== STOCK + deliveries ===== */
+let delivCartItems=[];
+function renderDelivCart(){const box=document.getElementById("delivCart");box.innerHTML="";
+  delivCartItems.forEach((it,idx)=>{const m=byCode[it.code];const line=document.createElement("div");line.className="cartline";
+    line.innerHTML=`<span class="mono"><b>${it.code}</b></span><span>${m?m.name_en:'?'}</span><span>×${it.qty}</span><button class="x">×</button>`;
+    line.querySelector(".x").onclick=()=>{delivCartItems.splice(idx,1);renderDelivCart();};box.appendChild(line);});}
+document.getElementById("delivAddItem").onclick=()=>{const code=resolveCode(document.getElementById("delivCode").value);const qty=+document.getElementById("delivQty").value||1;
+  if(!code){alert("Unknown code 餐码无法识别");return;}delivCartItems.push({code,qty});
+  document.getElementById("delivCode").value="";document.getElementById("delivQty").value="1";renderDelivCart();};
+document.getElementById("delivSave").onclick=()=>{
+  const pend=resolveCode(document.getElementById("delivCode").value);
+  if(pend)delivCartItems.push({code:pend,qty:+document.getElementById("delivQty").value||1});
+  if(!delivCartItems.length){alert("Add at least one dish 请先加一项");return;}
+  const date=document.getElementById("delivDate").value||todayISO();
+  db.deliveries.unshift({id:uid(),date,items:delivCartItems.slice(),note:document.getElementById("delivNote").value.trim()});
+  delivCartItems=[];renderDelivCart();document.getElementById("delivCode").value="";document.getElementById("delivQty").value="1";document.getElementById("delivNote").value="";
+  setDirty();renderDelivLog();renderStock();document.getElementById("delivAcc").open=false;
+};
+function renderDelivLog(){const ul=document.getElementById("delivLog");ul.innerHTML="";
+  if(!db.deliveries.length){ul.innerHTML='<div class="empty">No deliveries yet 还没有收货记录</div>';return;}
+  db.deliveries.forEach(d=>{const li=document.createElement("li");li.className="logitem";
+    const codes=d.items.map(it=>`<span><b>${it.code}</b> ${byCode[it.code]?byCode[it.code].name_en:''} ×${it.qty}</span>`).join("");
+    li.innerHTML=`<div class="top"><span class="date">${d.date}</span><span>${d.items.reduce((a,b)=>a+(+b.qty||0),0)} serve(s)</span><button class="del">Delete 删除</button></div><div class="codes">${codes}</div>${d.note?`<div class="note">${d.note}</div>`:''}`;
+    li.querySelector(".del").onclick=()=>{db.deliveries=db.deliveries.filter(x=>x.id!==d.id);setDirty();renderDelivLog();renderStock();};ul.appendChild(li);});}
+document.getElementById("consSave").onclick=()=>{const code=resolveCode(document.getElementById("consCode").value);
+  if(!code){alert("Unknown code 餐码无法识别");return;}const date=document.getElementById("consDate").value||todayISO();const qty=+document.getElementById("consQty").value||1;
+  db.consumption.unshift({id:uid(),date,code,qty});document.getElementById("consCode").value="";document.getElementById("consQty").value="1";setDirty();renderConsLog();renderStock();};
+function renderConsLog(){const ul=document.getElementById("consLog");ul.innerHTML="";
+  if(!db.consumption.length){ul.innerHTML='<div class="empty">No consumption yet 还没有消耗记录</div>';return;}
+  db.consumption.forEach(c=>{const li=document.createElement("li");li.className="logitem";
+    li.innerHTML=`<div class="top"><span class="date">${c.date}</span><span><b class="mono">${c.code}</b> ${byCode[c.code]?byCode[c.code].name_en:''} ×${c.qty}</span><button class="del">Delete 删除</button></div>`;
+    li.querySelector(".del").onclick=()=>{db.consumption=db.consumption.filter(x=>x.id!==c.id);setDirty();renderConsLog();renderStock();};ul.appendChild(li);});}
+function renderStock(){const box=document.getElementById("stockBox");box.innerHTML="";const m=computeStock();
+  const rows=Object.entries(m).filter(([c,q])=>q!==0).sort((a,b)=>b[1]-a[1]);
+  if(!rows.length){box.innerHTML='<div class="empty">Stock is empty. Record a delivery to fill it. 暂无存货，先登记收货。</div>';return;}
+  const grid=document.createElement("div");grid.className="stockgrid";
+  rows.forEach(([code,qty])=>{const it=byCode[code],std=it&&it.line==="standard";
+    const card=document.createElement("div");card.className="scard"+(qty<0?" neg":"");
+    card.innerHTML=`<div class="top"><span class="c ${std?'std':''} mono">${code}</span><span class="qty ${qty<0?'neg':''}">${qty}</span></div>
+      <div class="nm">${it?it.name_en:'(unknown)'}</div><div class="zhn zh">${it?it.name_zh:''}</div>
+      <div class="ops"><span class="lbl">adjust 校正</span><button class="btn ghost sm" data-op="minus">−1</button><button class="btn ghost sm" data-op="plus">+1</button><button class="btn sm" data-op="eat">Eat −1 吃掉</button></div>`;
+    card.querySelector('[data-op=plus]').onclick=()=>{db.adjust[code]=(+db.adjust[code]||0)+1;setDirty();renderStock();};
+    card.querySelector('[data-op=minus]').onclick=()=>{db.adjust[code]=(+db.adjust[code]||0)-1;setDirty();renderStock();};
+    card.querySelector('[data-op=eat]').onclick=()=>{db.consumption.unshift({id:uid(),date:todayISO(),code,qty:1});setDirty();renderConsLog();renderStock();};
+    grid.appendChild(card);});
+  box.appendChild(grid);}
+
+/* ===== profile ===== */
+const PROFILE_FIELDS=[["supplier","Supplier","供应商"],["phone","Phone","电话"],["email","Email","邮箱"],["website","Website","网站"],["account","Account no.","客户号"],["referral","Referral code","推荐码"]];
+const CONTRACT_FIELDS=[["subsidy","CHSP subsidy / status","补贴/状态"],["quota","Weekly quota","每周配额"],["price","Unit price","单价"],["delivery_day","Delivery day","配送日"],["pause_rule","Pause / hold rule","暂停规则"],["notes","Notes","备注","textarea"]];
+function fieldEl(group,k,en,zh,type){const w=document.createElement("div");w.className="field";if(type==="textarea")w.style.gridColumn="1 / -1";
+  w.innerHTML=`<label>${en} <span class="zh">${zh}</span></label>`+(type==="textarea"?`<textarea></textarea>`:`<input type="text">`);
+  const inp=w.querySelector("textarea,input");inp.value=db[group][k]||"";inp.oninput=()=>{db[group][k]=inp.value;setDirty();};return w;}
+function renderProfile(){const pf=document.getElementById("profFields");pf.innerHTML="";PROFILE_FIELDS.forEach(([k,en,zh])=>pf.appendChild(fieldEl("profile",k,en,zh)));
+  const cf=document.getElementById("contractFields");cf.innerHTML="";CONTRACT_FIELDS.forEach(([k,en,zh,t])=>cf.appendChild(fieldEl("contract",k,en,zh,t)));}
+
+/* ===== render all ===== */
+function renderAll(){
+  document.getElementById("delivDate").value=todayISO();document.getElementById("consDate").value=todayISO();
+  renderBuilder();renderMenu();renderStock();renderDelivLog();renderConsLog();renderProfile();updateStatus();
+}
+renderAll();
+</script>
+</body>
+</html>
