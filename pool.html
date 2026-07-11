@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>选餐池 · Meal Hub</title>
+<style>
+:root{
+  --bg:#FFF9F0; --card:#FFFFFF; --ink:#3A2E22; --dim:#8A7A66;
+  --line:#EADFCE; --accent:#D96C2C; --green:#3E8E5A; --pool:#FFF3E0;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:system-ui,'Noto Sans SC',sans-serif;font-size:17px;line-height:1.5;padding-bottom:90px}
+.wrap{max-width:600px;margin:0 auto;padding:0 12px}
+
+header{padding:18px 0 8px;text-align:center}
+h1{font-size:23px;font-weight:800}
+h1 span{color:var(--accent)}
+.sub{color:var(--dim);font-size:13px;margin-top:2px}
+
+/* 顶部标签页 */
+.tabs{display:flex;gap:6px;position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:10}
+.tab{flex:1;text-align:center;padding:12px 4px;border-radius:12px;background:var(--card);border:1.5px solid var(--line);font-size:15px;font-weight:700;color:var(--dim)}
+.tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.tab .n{display:inline-block;min-width:20px;font-size:12px;background:rgba(0,0,0,.12);border-radius:10px;padding:0 5px;margin-left:2px}
+
+/* 分类条 */
+.cats{display:flex;gap:6px;overflow-x:auto;padding:8px 0;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cat{flex:0 0 auto;padding:9px 16px;border-radius:20px;background:var(--card);border:1.5px solid var(--line);font-size:15px;font-weight:600}
+.cat.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+input.search{width:100%;padding:13px 15px;font-size:16px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);margin:4px 0 8px}
+
+/* 菜品行 */
+.item{display:flex;align-items:center;gap:10px;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:13px 12px;margin-bottom:8px}
+.item.pooled{background:var(--pool);border-color:#F0C48A}
+.item .info{flex:1;min-width:0}
+.item .zh{font-size:17px;font-weight:700}
+.item .en{font-size:13px;color:var(--dim)}
+.item .num{font-size:12px;color:var(--accent);font-weight:700}
+.star{flex:0 0 auto;width:52px;height:52px;border-radius:50%;border:2px solid var(--line);background:#fff;font-size:24px;color:#C9BBA6}
+.item.pooled .star{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* 配套 */
+.setcard{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+.setcard h3{font-size:18px;color:var(--accent);margin-bottom:8px}
+.slot{margin-bottom:10px}
+.slot label{font-size:13px;color:var(--dim);font-weight:700;display:block;margin-bottom:4px}
+.slot select{width:100%;padding:13px;font-size:16px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+
+/* 输出 */
+.outbox{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:14px;white-space:pre-wrap;font-size:15px;line-height:1.7}
+.btnrow{display:flex;gap:10px;margin:12px 0}
+.btn{flex:1;padding:16px;border-radius:14px;border:none;font-size:17px;font-weight:800;background:var(--accent);color:#fff}
+.btn.alt{background:var(--green)}
+.btn:active{opacity:.85}
+.hint{font-size:13px;color:var(--dim);text-align:center;margin:6px 0}
+.empty{text-align:center;color:var(--dim);padding:40px 10px;font-size:16px}
+
+.page{display:none}
+.page.on{display:block}
+
+@media print{
+  .tabs,.btnrow,.hint,header .sub,.no-print{display:none!important}
+  body{background:#fff;padding:0;font-size:13pt}
+  .outbox{border:none;padding:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>🍱 选餐池 <span>Meal Pool</span></h1>
+  <div class="sub">先入池 → 再配套 → 输出给送餐方轮换</div>
+</header>
+
+<div class="tabs no-print">
+  <div class="tab on" data-p="menu">全菜单</div>
+  <div class="tab" data-p="pool">我的池<span class="n" id="poolN">0</span></div>
+  <div class="tab" data-p="sets">配套</div>
+  <div class="tab" data-p="out">输出</div>
+</div>
+
+<!-- 页1 全菜单 -->
+<div class="page on" id="p-menu">
+  <div class="cats" id="cats"></div>
+  <input class="search" id="search" placeholder="🔍 搜菜名(中/英/编号)…">
+  <div id="menuList"></div>
+</div>
+
+<!-- 页2 我的池 -->
+<div class="page" id="p-pool">
+  <div class="hint">点 ⭐ 移出池。配套时只从这里选。</div>
+  <div id="poolList"></div>
+</div>
+
+<!-- 页3 配套 -->
+<div class="page" id="p-sets">
+  <div class="hint">每套主食必选,汤/甜品可留空</div>
+  <div id="setsArea"></div>
+</div>
+
+<!-- 页4 输出 -->
+<div class="page" id="p-out">
+  <div class="btnrow">
+    <button class="btn" id="btnCopy">📋 复制文字</button>
+    <button class="btn alt" onclick="window.print()">🖨️ 打印</button>
+  </div>
+  <div class="outbox" id="outText"></div>
+  <div class="hint">复制后可直接贴进给 Lite n' Easy / 送餐协调员的邮件或短信</div>
+</div>
+
+</div>
+<script>
+// ── 菜单数据(Monash Meals by Lite n' Easy 订餐单)──
+const MENU = [
+// 标准晚餐 Standard Dinners
+["01","Spaghetti bolognese","意大利肉酱面","main","标准晚餐"],
+["04","Corned beef","咸牛肉配白汁薯蓉","main","标准晚餐"],
+["08","Hearty beef casserole","炖牛肉煲","main","标准晚餐"],
+["10","Sweet and sour chicken","咕噜鸡配饭","main","标准晚餐"],
+["14","Roast beef","烤牛肉","main","标准晚餐"],
+["18","Roast chicken","烤鸡","main","标准晚餐"],
+["29","Savoury beef rissoles","香煎牛肉饼","main","标准晚餐"],
+["49","Chicken dijon","第戎芥末鸡","main","标准晚餐"],
+["50","Sausages and onion gravy","香肠配洋葱肉汁","main","标准晚餐"],
+["54","Homestyle macaroni cheese","家常芝士通粉","main","标准晚餐"],
+["57","Tortilla stack","墨西哥薄饼叠","main","标准晚餐"],
+["72","Spinach and ricotta tortellini","菠菜芝士意大利饺","main","标准晚餐"],
+["77","Roast pork","烤猪肉配苹果","main","标准晚餐"],
+["82","Beef korma","印度咖喱牛肉配姜黄饭","main","标准晚餐"],
+["134","Spaghetti marinara","海鲜意面","main","标准晚餐"],
+["173","Tasmanian salmon pasta","三文鱼意面","main","标准晚餐"],
+["180","Shepherd's pie","牧羊人派","main","标准晚餐"],
+["181","Butter chicken","印度黄油鸡配饭","main","标准晚餐"],
+["183","Chicken parmigiana","芝士番茄鸡排","main","标准晚餐"],
+["187","Chicken and cashews","腰果鸡丁配饭","main","标准晚餐"],
+["189","Chargrilled steak & mushroom sauce","炭烤牛排蘑菇汁","main","标准晚餐"],
+["194","Thai red chicken curry","泰式红咖喱鸡","main","标准晚餐"],
+["195","Slow cooked lamb","慢炖羊肉","main","标准晚餐"],
+["199","Lamb roast","烤羊肉","main","标准晚餐"],
+["207","Chicken fettuccine with broccolini","鸡肉宽面配西兰苔","main","标准晚餐"],
+["212","Pepperoni pasta","辣肠意面","main","标准晚餐"],
+["213","Vegetarian potato & chickpea curry","素食土豆鹰嘴豆咖喱","main","标准晚餐"],
+["217","Pork scallopini","意式煎猪排","main","标准晚餐"],
+["219","Pesto fettuccine","青酱宽面","main","标准晚餐"],
+["222","Coconut beef curry","椰香牛肉咖喱","main","标准晚餐"],
+["226","Parmesan crusted fish","芝士脆皮鱼","main","标准晚餐"],
+["227","Spicy Thai green chicken curry","泰式青咖喱鸡","main","标准晚餐"],
+["231","Roasted Mediterranean veg ravioli","地中海烤蔬菜意饺","main","标准晚餐"],
+["239","Honey soy tofu and vegetables","蜜糖豉油豆腐蔬菜","main","标准晚餐"],
+["241","Tofu katsu curry","日式吉列豆腐咖喱","main","标准晚餐"],
+["242","Vegetarian spaghetti bolognese","素肉酱意面","main","标准晚餐"],
+["243","Thai yellow vegetable curry","泰式黄咖喱蔬菜","main","标准晚餐"],
+["244","Japanese veg stir fry udon","日式炒乌冬","main","标准晚餐"],
+["247","Vegetarian chilli beans turmeric rice","素辣豆配姜黄饭","main","标准晚餐"],
+["249","Greek-style lentils","希腊式扁豆","main","标准晚餐"],
+["251","Spaghetti and meatballs","肉丸意面","main","标准晚餐"],
+// My Choice 主食
+["11000","Spaghetti bolognese","意大利肉酱面","main","My Choice"],
+["11002","Beef stroganoff","俄式忌廉炖牛肉","main","My Choice"],
+["11003","Slow cooked beef pepper gravy","慢炖牛肉黑椒汁","main","My Choice"],
+["11004","Tasmanian salmon white wine sauce","白酒汁三文鱼","main","My Choice"],
+["11005","Sausages with onion gravy","香肠配洋葱肉汁","main","My Choice"],
+["11006","Parmesan crusted fish","芝士脆皮鱼","main","My Choice"],
+["11007","Corned beef","咸牛肉","main","My Choice"],
+["11008","Beef bourguignon","勃艮第红酒炖牛肉","main","My Choice"],
+["11009","Curried prawns with pilaf rice","咖喱虾配香饭","main","My Choice"],
+["11011","Pork scallopini","意式煎猪排","main","My Choice"],
+["11012","Roast pork","烤猪肉","main","My Choice"],
+["11013","Roast lamb","烤羊肉","main","My Choice"],
+["11014","Roast beef","烤牛肉","main","My Choice"],
+["11015","Slow cooked lamb","慢炖羊肉","main","My Choice"],
+["11016","Shepherd's pie","牧羊人派","main","My Choice"],
+["11017","Spaghetti carbonara","卡邦尼芝士意面","main","My Choice"],
+["11018","Fisherman's pie","渔夫海鲜派","main","My Choice"],
+["11020","Butter chicken","印度黄油鸡","main","My Choice"],
+["11021","Chicken and cashews","腰果鸡丁","main","My Choice"],
+["11022","Honey soy chicken","蜜糖豉油鸡","main","My Choice"],
+["11023","Roast chicken mushroom sauce","烤鸡配蘑菇汁","main","My Choice"],
+["11024","Rosemary garlic chicken potato bake","迷迭香蒜蓉鸡配焗薯","main","My Choice"],
+["11025","Apricot chicken","杏子鸡","main","My Choice"],
+["11027","Sweet and sour chicken","咕噜鸡","main","My Choice"],
+["11029","Roast chicken","烤鸡","main","My Choice"],
+["11030","Rissoles with mash and gravy","肉饼配薯蓉肉汁","main","My Choice"],
+["11032","Chicken parmigiana","芝士番茄鸡排","main","My Choice"],
+["11033","Chicken schnitzel and gravy","炸鸡排配肉汁","main","My Choice"],
+["11034","Spaghetti creamy garlic prawns","蒜香忌廉虾意面","main","My Choice"],
+["11035","Beef lasagne","牛肉千层面","main","My Choice"],
+["11036","Hearty beef casserole","炖牛肉煲","main","My Choice"],
+["11037","Roast turkey cranberry sauce","烤火鸡配红莓汁","main","My Choice"],
+["11040","Tuna mornay","吞拿鱼芝士焗","main","My Choice"],
+["11041","Special fried rice","扬州炒饭","main","My Choice"],
+["11042","Chicken in creamy white sauce","白汁鸡","main","My Choice"],
+["11043","Creamy chicken boscaiola","忌廉蘑菇烟肉鸡意面","main","My Choice"],
+["11044","Irish stew with mash","爱尔兰炖肉配薯蓉","main","My Choice"],
+// 汤 Soups
+["21000","Creamy tomato soup","忌廉番茄汤","soup","汤"],
+["21001","Pumpkin soup","南瓜汤","soup","汤"],
+["21002","Chicken noodle soup","鸡肉面汤","soup","汤"],
+["21003","Pea and ham soup","豌豆火腿汤","soup","汤"],
+["21004","Potato and leek soup","薯仔韭葱汤","soup","汤"],
+["21005","Chicken and sweet corn soup","鸡蓉粟米汤","soup","汤"],
+["21006","Beef and barley soup","牛肉大麦汤","soup","汤"],
+["21007","Seafood chowder","海鲜周打汤","soup","汤"],
+["21008","Creamy chicken mushroom soup","忌廉鸡蘑菇汤","soup","汤"],
+// 甜品 Desserts
+["22000","Vanilla custard","香草吉士","dessert","甜品"],
+["22001","Rice pudding","大米布丁","dessert","甜品"],
+["22002","Apricot pudding","杏子布丁","dessert","甜品"],
+["22003","Sticky date pudding custard","枣糕配吉士","dessert","甜品"],
+["22004","Lemon sponge with custard","柠檬海绵蛋糕配吉士","dessert","甜品"],
+["22005","Apple cinnamon crumble","苹果肉桂金宝","dessert","甜品"],
+["22006","Rice pudding blueberry apple","蓝莓苹果大米布丁","dessert","甜品"],
+["22007","Bread and butter pudding","面包牛油布丁","dessert","甜品"],
+["22008","Cherry raspberry crumble","樱桃覆盆子金宝","dessert","甜品"],
+["22009","Strawberry cheesecake crumble","草莓芝士蛋糕金宝","dessert","甜品"],
+["22010","Tropical cheesecake crumble","热带芝士蛋糕金宝","dessert","甜品"],
+["22011","Blueberry cheesecake crumble","蓝莓芝士蛋糕金宝","dessert","甜品"],
+["720","Fruit cup (fruit salad)","什果杯 170g","dessert","甜品"],
+["721","Fruit cup (peach)","桃果杯 170g","dessert","甜品"],
+["722","Fruit cup (peaches & pears)","桃梨果杯 170g","dessert","甜品"],
+["723","Fruit cup (pear)","梨果杯 170g","dessert","甜品"]
+];
+
+const CATS=["全部","标准晚餐","My Choice","汤","甜品"];
+const TYPE_ZH={main:"主食",soup:"汤",dessert:"甜品"};
+let pool = JSON.parse(localStorage.getItem('mealPool')||'[]');
+let sets = JSON.parse(localStorage.getItem('mealSets')||'[{},{},{}]');
+let curCat="全部", curSearch="";
+
+const $=id=>document.getElementById(id);
+const byNum=n=>MENU.find(m=>m[0]===n);
+function save(){localStorage.setItem('mealPool',JSON.stringify(pool));localStorage.setItem('mealSets',JSON.stringify(sets));}
+
+// 标签页切换
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+    $('p-'+t.dataset.p).classList.add('on');
+    if(t.dataset.p==='pool')renderPool();
+    if(t.dataset.p==='sets')renderSets();
+    if(t.dataset.p==='out')renderOut();
+  };
+});
+
+// 分类条
+CATS.forEach(c=>{
+  const el=document.createElement('div');
+  el.className='cat'+(c===curCat?' on':'');
+  el.textContent=c;
+  el.onclick=()=>{curCat=c;document.querySelectorAll('.cat').forEach(x=>x.classList.toggle('on',x.textContent===c));renderMenu();};
+  $('cats').appendChild(el);
+});
+$('search').oninput=e=>{curSearch=e.target.value.trim().toLowerCase();renderMenu();};
+
+function itemRow(m,inPoolPage){
+  const pooled=pool.includes(m[0]);
+  const div=document.createElement('div');
+  div.className='item'+(pooled?' pooled':'');
+  div.innerHTML=`<div class="info">
+    <div class="num">#${m[0]} · ${TYPE_ZH[m[3]]}</div>
+    <div class="zh">${m[2]}</div>
+    <div class="en">${m[1]}</div>
+  </div><button class="star">${pooled?'★':'☆'}</button>`;
+  div.querySelector('.star').onclick=()=>{
+    if(pooled){pool=pool.filter(x=>x!==m[0]);
+      // 同时从配套里移除
+      sets.forEach(s=>{for(const k in s){if(s[k]===m[0])delete s[k];}});
+    } else pool.push(m[0]);
+    save();updateCount();
+    inPoolPage?renderPool():renderMenu();
+  };
+  return div;
+}
+
+function renderMenu(){
+  const list=$('menuList');list.innerHTML='';
+  MENU.filter(m=>(curCat==='全部'||m[4]===curCat))
+    .filter(m=>!curSearch||m[1].toLowerCase().includes(curSearch)||m[2].includes(curSearch)||m[0].includes(curSearch))
+    .forEach(m=>list.appendChild(itemRow(m,false)));
+}
+
+function renderPool(){
+  const list=$('poolList');list.innerHTML='';
+  if(!pool.length){list.innerHTML='<div class="empty">池还是空的 —— 去「全菜单」点 ☆ 把喜欢的加进来</div>';return;}
+  ['main','soup','dessert'].forEach(t=>{
+    const items=pool.map(byNum).filter(m=>m&&m[3]===t);
+    if(items.length){
+      const h=document.createElement('div');h.className='hint';h.style.textAlign='left';h.style.fontWeight='700';
+      h.textContent=`── ${TYPE_ZH[t]}(${items.length}项)──`;
+      list.appendChild(h);
+      items.forEach(m=>list.appendChild(itemRow(m,true)));
+    }
+  });
+}
+
+function updateCount(){$('poolN').textContent=pool.length;}
+
+// 配套
+function renderSets(){
+  const area=$('setsArea');area.innerHTML='';
+  const opts=t=>pool.map(byNum).filter(m=>m&&m[3]===t);
+  for(let i=0;i<3;i++){
+    const card=document.createElement('div');card.className='setcard';
+    card.innerHTML=`<h3>套餐 ${i+1}</h3>`;
+    [['main','主食(必选)'],['soup','汤(可选)'],['dessert','甜品(可选)']].forEach(([t,label])=>{
+      const slot=document.createElement('div');slot.className='slot';
+      const sel=document.createElement('select');
+      sel.innerHTML=`<option value="">— 不选 —</option>`+
+        opts(t).map(m=>`<option value="${m[0]}" ${sets[i][t]===m[0]?'selected':''}>#${m[0]} ${m[2]}</option>`).join('');
+      sel.onchange=()=>{sets[i][t]=sel.value||undefined;if(!sel.value)delete sets[i][t];save();};
+      slot.innerHTML=`<label>${label}</label>`;slot.appendChild(sel);
+      card.appendChild(slot);
+    });
+    area.appendChild(card);
+  }
+  if(!pool.length)area.innerHTML='<div class="empty">先去「全菜单」把喜欢的加入池,再回来配套</div>';
+}
+
+// 输出
+function renderOut(){
+  const today=new Date();
+  let txt=`Preferred Meal Selection 选餐单\nMin Kwan Chan · ${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}\n`;
+  txt+=`(Lite n' Easy CHSP / Monash Meals)\n\n`;
+  // 套餐
+  let hasSet=false;
+  sets.forEach((s,i)=>{
+    if(s.main||s.soup||s.dessert){
+      hasSet=true;
+      txt+=`【Set ${i+1} 套餐${i+1}】\n`;
+      [['main','Main 主食'],['soup','Soup 汤'],['dessert','Dessert 甜品']].forEach(([t,label])=>{
+        if(s[t]){const m=byNum(s[t]);txt+=`  ${label}: #${m[0]} ${m[1]} ${m[2]}\n`;}
+      });
+      txt+='\n';
+    }
+  });
+  if(!hasSet)txt+='(尚未组合套餐)\n\n';
+  // 轮换池
+  txt+=`【Rotation Pool 轮换候选池】\n以下均为本人喜爱菜品,送餐时可在池内自由轮换配搭:\n\n`;
+  ['main','soup','dessert'].forEach(t=>{
+    const items=pool.map(byNum).filter(m=>m&&m[3]===t);
+    if(items.length){
+      txt+=`${t==='main'?'Mains 主食':t==='soup'?'Soups 汤':'Desserts 甜品'} (${items.length}):\n`;
+      items.forEach(m=>txt+=`  #${m[0]}  ${m[1]}  ${m[2]}\n`);
+      txt+='\n';
+    }
+  });
+  txt+=`Contact 联系: 0414 469 258`;
+  $('outText').textContent=txt;
+}
+
+$('btnCopy').onclick=async()=>{
+  const txt=$('outText').textContent;
+  try{await navigator.clipboard.writeText(txt);}catch(e){
+    const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
+  }
+  $('btnCopy').textContent='✓ 已复制';setTimeout(()=>$('btnCopy').textContent='📋 复制文字',1500);
+};
+
+updateCount();renderMenu();
+</script>
+</body>
+</html>
